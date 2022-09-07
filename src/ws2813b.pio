@@ -1,0 +1,47 @@
+;
+; Copyright (c) 2022 Jonathan Springer (adaptation for WS2813B)
+; Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
+;
+; SPDX-License-Identifier: BSD-3-Clause
+;
+
+.program ws2813b
+.side_set 1
+
+.define public T1 3     ; T0H        = 300 ns
+.define public T2 5     ; T0L - T0H  = 800 ns - 300 ns = 500 ns
+.define public T3 8     ; T1H or T1L = 800 ns
+
+.lang_opt python sideset_init = pico.PIO.OUT_HIGH
+.lang_opt python out_init     = pico.PIO.OUT_HIGH
+.lang_opt python out_shiftdir = 1
+
+;
+;  This is different from the ws2812 because the low pulse duration is constant.  Only
+;  the time of the high pulse determines the bit value.  But it's a beautiful 3 instructions :)
+;
+bitloop:
+    out x, 1       side 0 [T3 - 1] ; Side-set still takes place when instruction stalls
+    jmp !x bitloop side 1 [T1 - 1] ; Branch on the bit we shifted out. Positive pulse
+    jmp bitloop    side 1 [T2 - 1] ; Continue driving high, for a long pulse
+
+% c-sdk {
+#include "hardware/clocks.h"
+
+static inline void ws2813b_program_init(PIO pio, uint sm, uint offset, uint pin, bool rgbw) {
+
+    pio_gpio_init(pio, pin);
+    pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, true);
+
+    pio_sm_config c = ws2813b_program_get_default_config(offset);
+    sm_config_set_sideset_pins(&c, pin);
+    sm_config_set_out_shift(&c, false, true, rgbw ? 32 : 24);
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
+
+    float div = clock_get_hz(clk_sys) / 10000000;  //  This should give 100 ns/PIO instruction.
+    sm_config_set_clkdiv(&c, div);
+
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}
