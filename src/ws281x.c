@@ -26,7 +26,6 @@
 
 #include "hardware/pio.h"
 
-#include "pico_piano.h"
 #include "ws2813b.pio.h"
 #include "ws2812.pio.h"
 

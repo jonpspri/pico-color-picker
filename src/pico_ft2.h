@@ -17,16 +17,13 @@
  * You should have received a copy of the GNU General Public License along with
  * pico-color-picker. If not, see <https://www.gnu.org/licenses/>.
  */
+#ifndef __PICO_FT2_H
+#define __PICO_FT2_H
 
-#ifndef _COLOR_PICKER_H
-#define _COLOR_PICKER_H
+#include <ft2build.h>
+#include <freetype/freetype.h>
 
-#ifndef DEBUG
-#define DEBUG 0
+extern void pico_ft2_init_otf();
+extern void pico_ft2_set_font_size(FT_Long);
+extern void pico_ft2_render_char(FT_ULong);
 #endif
-
-#define dprintf(fmt, ...) \
-    do { if (DEBUG) fprintf(stderr, "%s:%d:%s(): " fmt "\n", __FILE__, \
-            __LINE__, __func__, __VA_ARGS__); } while (0)
-
-#endif /* _COLOR_PICKER_H */

@@ -21,6 +21,7 @@ cmake_minimum_required(VERSION 3.13)
 include(${CMAKE_SOURCE_DIR}/pico_sdk_import.cmake)
 include(${CMAKE_SOURCE_DIR}/pico_extras_import.cmake)
 project(pico_piano C CXX ASM)
+
 pico_sdk_init()
 
 set(CMAKE_C_STANDARD 11)
@@ -28,4 +29,4 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_subdirectory(src)
-add_subdirectory(freetype)
+add_subdirectory(IBM-Plex-Mono)

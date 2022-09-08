@@ -26,8 +26,9 @@
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
 
-#include "color-picker.h"
+#include "pico_debug.h"
 #include "ws281x.h"
+#include "pico_ft2.h"
 
 #if PICO_ON_DEVICE
 #include "pico/binary_info.h"
@@ -40,10 +41,22 @@ int main() {
 #if LIB_PICO_STDIO_USB && DEBUG
   while (!tud_cdc_connected()) { sleep_ms(100);  }
 #endif
-  dprintf("%s", "Initializing PIO...");
-  ws281x_pio_init();
+  debug_printf("%s", "Initializing PIO...");
+  //ws281x_pio_init();
+
+  debug_printf("%s", "Initializing Plex...");
+  pico_ft2_init_otf();
+
+  uint16_t font_size = 16;
+  debug_printf("Setting font size to %d", font_size);
+  pico_ft2_set_font_size(16);
+
+  const char render_string[] = "IBM";
+  debug_printf("Attempting to render %s", render_string);
+
+  for(int i=0; render_string[i]; i++) pico_ft2_render_char(render_string[i]);
 
   while(true) {
-    /* DO SOMETHING */
+    sleep_ms(10000);
   }
 }
