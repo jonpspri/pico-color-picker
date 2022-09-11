@@ -21,6 +21,9 @@
 #ifndef _PICO_DEBUG_H
 #define _PICO_DEBUG_H
 
+#include <stdio.h>
+#include "pico/stdio.h"
+
 #ifdef NDEBUG
 #define DEBUG 0
 #else

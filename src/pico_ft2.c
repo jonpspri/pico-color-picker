@@ -22,6 +22,8 @@
 #include <freetype/freetype.h>
 
 #include "pico_debug.h"
+#include "ssd1306.h"
+#include "pico_ft2.h"
 
 extern FT_Byte _binary_IBMPlexMono_Regular_otf_start;
 extern uint32_t _binary_IBMPlexMono_Regular_otf_size;
@@ -46,37 +48,69 @@ void pico_ft2_init_otf() {
     if(error) {
         debug_printf("FT_New_Memory_Face failed: %s", FT_Error_String(error));
     }
+
+    debug_printf("Loaded %s %s", ft_face->family_name, ft_face->style_name);
+
 }
 
 void pico_ft2_set_font_size(FT_Long size) {
+    FT_Size_RequestRec ft_size_request = {
+        FT_SIZE_REQUEST_TYPE_CELL,
+        size << 6, size << 6, 145, 145
+    };
+
     FT_Error error;
-    error = FT_Set_Pixel_Sizes( ft_face, 0, size );
+    debug_printf("Requesting font size %ld", size);
+    error = FT_Request_Size(ft_face, &ft_size_request);
     if(error) {
-        debug_printf("FT_New_Memory_Face failed: %s", FT_Error_String(error));
+        debug_printf("FT_Request_Size failed: %s", FT_Error_String(error));
     }
 }
 
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
 #define BYTE_TO_BINARY(byte)  \
-  (byte & 0x80 ? '1' : '0'), \
-  (byte & 0x40 ? '1' : '0'), \
-  (byte & 0x20 ? '1' : '0'), \
-  (byte & 0x10 ? '1' : '0'), \
-  (byte & 0x08 ? '1' : '0'), \
-  (byte & 0x04 ? '1' : '0'), \
-  (byte & 0x02 ? '1' : '0'), \
-  (byte & 0x01 ? '1' : '0')
+  (byte & 0x80 ? 'X' : ' '), \
+  (byte & 0x40 ? 'X' : ' '), \
+  (byte & 0x20 ? 'X' : ' '), \
+  (byte & 0x10 ? 'X' : ' '), \
+  (byte & 0x08 ? 'X' : ' '), \
+  (byte & 0x04 ? 'X' : ' '), \
+  (byte & 0x02 ? 'X' : ' '), \
+  (byte & 0x01 ? 'X' : ' ')
 
-void pico_ft2_render_char(FT_ULong char_code) {
-    FT_Load_Char( ft_face, char_code,
-        FT_LOAD_RENDER | FT_LOAD_MONOCHROME
-        );
-    FT_Bitmap bitmap = ft_face->glyph->bitmap;
-    for (int row=0; row<bitmap.rows; row++) {
-      for (int b=0; b<bitmap.pitch; b++) {
-        printf(BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(bitmap.buffer[row*bitmap.pitch+b]));
-      }
-      putchar('\n');
-      fflush(stdout);
+void pico_ft2_render_char(uint32_t *pen_x, uint32_t *pen_y, FT_ULong char_code, void *canvas, pico_ft2_draw_function draw) {
+    FT_Error error;
+    error = FT_Load_Char( ft_face, char_code,
+            FT_LOAD_RENDER | FT_LOAD_MONOCHROME | FT_LOAD_TARGET_MONO);
+    if(error) {
+        debug_printf("FT_Load_Char failed: %s", FT_Error_String(error));
     }
+
+    for (uint32_t row=0; row < ft_face->glyph->bitmap.rows; row++) {
+        unsigned char *row_bytes = &(ft_face->glyph->bitmap.buffer[row*ft_face->glyph->bitmap.pitch]);
+        for (int col=0; col < ft_face->glyph->bitmap.width; col++) {
+            if(row_bytes[col>>3] & (1<<((7-col)%8))) {
+                uint32_t x = *pen_x + ft_face->glyph->bitmap_left + col;
+                uint32_t y = *pen_y - ft_face->glyph->bitmap_top + row;
+                draw(canvas, x, y);
+            }
+        }
+    }
+    (*pen_x) += ft_face->glyph->advance.x>>6;
+    (*pen_y) += ft_face->glyph->advance.y>>6;
+}
+
+void pico_ft2_set_initial_pen_from_top_left(uint32_t x, uint32_t y, uint32_t *pen_x, uint32_t *pen_y) {
+    FT_Error error;
+    error = FT_Load_Char( ft_face, 'l', FT_LOAD_RENDER | FT_LOAD_MONOCHROME | FT_LOAD_TARGET_MONO);
+    if(error) {
+        debug_printf("FT_Load_Char failed: %s", FT_Error_String(error));
+    }
+
+    *pen_x = x;
+    *pen_y = y + ft_face->glyph->bitmap_top;
+}
+
+uint32_t pico_ft2_line_height_px() {
+    return ft_face->size->metrics.height>>6;
 }

@@ -17,17 +17,33 @@
  * You should have received a copy of the GNU General Public License along with
  * pico-color-picker. If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef __PICO_FT2_H
-#define __PICO_FT2_H
 
-#include <ft2build.h>
-#include <freetype/freetype.h>
+#ifndef __HID_H
+#define __HID_H
 
-typedef void (*pico_ft2_draw_function)(void *, uint32_t, uint32_t);
+#include "pico/stdlib.h"
 
-extern void pico_ft2_init_otf();
-extern void pico_ft2_set_font_size(FT_Long);
-extern void pico_ft2_render_char(uint32_t *, uint32_t *, FT_ULong, void *, pico_ft2_draw_function);
-extern void pico_ft2_set_initial_pen_from_top_left(uint32_t, uint32_t, uint32_t*, uint32_t*);
-extern uint32_t pico_ft2_line_height_px();
+typedef uint32_t hid_handle;
+
+typedef enum {
+  HID_ROTARY_ENCODER,
+  HID_BUTTON
+} hid_t;
+
+typedef enum {
+  HID_ROTARY_ENCODER_CW,
+  HID_ROTARY_ENCODER_CCW,
+  HID_BUTTON_PRESS,
+  HID_BUTTON_RELEASE
+} hid_event_t;
+
+typedef struct {
+  hid_t hid_type;
+  uint32_t hid_component_handle;
+  hid_event_t hid_event;
+} hid_event_rec;
+
+extern int32_t hid_encoder_value(hid_handle handle);
+extern void hid_encoder_init(uint pin_a, uint pin_b, hid_handle *handle);
+extern void hid_start_polling();
 #endif
