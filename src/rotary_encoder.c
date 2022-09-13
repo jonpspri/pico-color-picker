@@ -53,14 +53,6 @@
 
 #include "rotary_encoder.pio.h"
 
-#ifndef ROTARY_ENCODER_PIO
-#define ROTARY_ENCODER_PIO 1
-#endif
-
-#ifndef ROTARY_ENCODER_DIVISOR
-#define ROTARY_ENCODER_DIVISOR 4
-#endif
-
 #define PIOx __CONCAT(pio, ROTARY_ENCODER_PIO)
 #define GPIO_FUNC_PIOx __CONCAT(GPIO_FUNC_PIO, ROTARY_ENCODER_PIO)
 

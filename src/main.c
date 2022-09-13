@@ -38,21 +38,16 @@
 bi_decl(bi_program_description("Piano driver."));
 #endif
 
-#define RED 0
-#define GREEN 1
-#define BLUE 2
-
-#define RGB_MIN_VALUE 0
-#define RGB_MAX_VALUE 255
-
-static int16_t rgb_values[3];
 static uint32_t rgb_value, prior_rgb_value = 0x1000000;
 
 void process_rotary_encoder(uint8_t re_number, int8_t delta) {
-  rgb_values[re_number] = rgb_values[re_number] + delta;
-  rgb_values[re_number] = MAX(rgb_values[re_number], RGB_MIN_VALUE);
-  rgb_values[re_number] = MIN(rgb_values[re_number], RGB_MAX_VALUE);
-  rgb_value = rgb_values[RED]<<16 | rgb_values[GREEN]<<8 | rgb_values[BLUE];
+  uint8_t shift = re_number<<3;
+  int16_t value = rgb_value>>shift & 0xffu;
+  value += delta * ((~gpio_get_all() & (1<<BUTTON1_PIN|1<<BUTTON2_PIN)) ? 0x1u : 0x11u);
+  value = MAX(value, 0);
+  value = MIN(value, 0xff);
+  rgb_value &= ~(0xff<<shift);
+  rgb_value |= ((uint8_t)value)<<shift;
 };
 
 int main() {
@@ -81,9 +76,15 @@ int main() {
   ssd1306_clear(&disp);
 
   debug_printf("%s", "Initializing Rotary Encoders...");
-  rotary_encoder_init(0, "Red Encoder", 14, false, process_rotary_encoder);
-  rotary_encoder_init(1, "Green Encoder", 16, true, process_rotary_encoder);
-  rotary_encoder_init(2, "Blue Encoder", 20, false, process_rotary_encoder);
+  rotary_encoder_init(2, "Red Encoder", ROTARY_ENCODER_RED_LOW_PIN, ROTARY_ENCODER_RED_INVERTED, process_rotary_encoder);
+  rotary_encoder_init(1, "Green Encoder", ROTARY_ENCODER_GREEN_LOW_PIN, ROTARY_ENCODER_GREEN_INVERTED, process_rotary_encoder);
+  rotary_encoder_init(0, "Blue Encoder", ROTARY_ENCODER_BLUE_LOW_PIN, ROTARY_ENCODER_BLUE_INVERTED, process_rotary_encoder);
+
+  debug_printf("%s", "Initializing Buttons...");
+  gpio_set_input_enabled(BUTTON1_PIN, true);
+  gpio_pull_up(BUTTON1_PIN);
+  gpio_set_input_enabled(BUTTON2_PIN, true);
+  gpio_pull_up(BUTTON2_PIN);
 
   char hex_color_value[8];
   pico_ft2_set_font_size(14);
@@ -94,10 +95,7 @@ int main() {
     uint32_t pen_x, pen_y;
     pico_ft2_set_initial_pen_from_top_left(0, 0, &pen_x, &pen_y);
 
-    sprintf(hex_color_value, "#%02x%02x%02x",
-        (uint8_t) rgb_values[RED],
-        (uint8_t) rgb_values[GREEN],
-        (uint8_t) rgb_values[BLUE]);
+    sprintf(hex_color_value, "#%06lx", rgb_value);
 
     ssd1306_clear(&disp);
     for(int i=0; hex_color_value[i]; i++) {
