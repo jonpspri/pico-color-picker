@@ -1,5 +1,10 @@
 ;
 ; Copyright (c) 2022 Jonathan Springer (adaptation for WS2813B)
+;
+; TODO:  GPL
+;
+; Original adapted code is...
+;
 ; Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
 ;
 ; SPDX-License-Identifier: BSD-3-Clause
@@ -38,7 +43,7 @@ static inline void ws2813b_program_init(PIO pio, uint sm, uint offset, uint pin,
     sm_config_set_out_shift(&c, false, true, rgbw ? 32 : 24);
     sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
 
-    float div = clock_get_hz(clk_sys) / 10000000;  //  This should give 100 ns/PIO instruction.
+    float div = clock_get_hz(clk_sys) / 10000000;  /*  This should give 100 ns/PIO instruction. */
     sm_config_set_clkdiv(&c, div);
 
     pio_sm_init(pio, sm, offset, &c);

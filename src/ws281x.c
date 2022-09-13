@@ -29,6 +29,8 @@
 #include "ws2813b.pio.h"
 #include "ws2812.pio.h"
 
+#include "pico_debug.h"
+
 #define WS2813B_PIOx __CONCAT(pio, PICO_WS2813B_PIO)
 #define WS2813B_GPIO_FUNC_PIOx __CONCAT(GPIO_FUNC_PIO, PICO_WS2813B_PIO)
 
@@ -77,7 +79,7 @@ void ws281x_sparkle_pixels(uint16_t rgb_count, uint32_t *rgbs) {
     sem_acquire_blocking(&reset_delay_complete_sem);
     grbs_count = rgb_count;
     for (int i=0; i<rgb_count; i++) {
-        dprintf("Color %d/%d: %06lx", i, rgb_count, rgbs[i]);
+        debug_printf("Color %d/%d: %06lx", i, rgb_count, rgbs[i]);
         grbs[i] = urgb_u32(rgbs[i]);
     }
     multicore_reset_core1();

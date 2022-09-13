@@ -31,3 +31,5 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_subdirectory(src)
 add_subdirectory(IBM-Plex-Mono)
 include(pico_freetype.cmake)
+
+file(COPY .gdbinit DESTINATION .)

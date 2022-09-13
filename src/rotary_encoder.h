@@ -18,32 +18,17 @@
  * pico-color-picker. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef __HID_H
-#define __HID_H
+#ifndef __ROTARY_ENCODER_H
+#define __ROTARY_ENCODER_H
 
 #include "pico/stdlib.h"
 
-typedef uint32_t hid_handle;
+typedef void (*rotary_encoder_callback_function)(uint8_t re_number, int8_t delta);
 
-typedef enum {
-  HID_ROTARY_ENCODER,
-  HID_BUTTON
-} hid_t;
-
-typedef enum {
-  HID_ROTARY_ENCODER_CW,
-  HID_ROTARY_ENCODER_CCW,
-  HID_BUTTON_PRESS,
-  HID_BUTTON_RELEASE
-} hid_event_t;
-
-typedef struct {
-  hid_t hid_type;
-  uint32_t hid_component_handle;
-  hid_event_t hid_event;
-} hid_event_rec;
-
-extern int32_t hid_encoder_value(hid_handle handle);
-extern void hid_encoder_init(uint pin_a, uint pin_b, hid_handle *handle);
-extern void hid_start_polling();
+void rotary_encoder_init(
+    uint8_t re_number,
+    const char *name,
+    uint8_t pin,
+    bool reverse,
+    rotary_encoder_callback_function callback);
 #endif

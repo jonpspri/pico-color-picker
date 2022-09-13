@@ -28,13 +28,16 @@ add_executable(pico_color_picker
   ws281x.c
   ssd1306.c
   pico_ft2.c
-  hid.c
+  pio_irq.c
+  rotary_encoder.c
 )
 
 pico_generate_pio_header(pico_color_picker
   ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
 pico_generate_pio_header(pico_color_picker
   ${CMAKE_CURRENT_LIST_DIR}/ws2813b.pio)
+pico_generate_pio_header(pico_color_picker
+  ${CMAKE_CURRENT_LIST_DIR}/rotary_encoder.pio)
 
 pico_enable_stdio_usb(pico_color_picker 1)
 pico_enable_stdio_uart(pico_color_picker 0)

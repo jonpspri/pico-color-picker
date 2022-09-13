@@ -1,0 +1,85 @@
+;
+; SPDX-FileCopyrightText: 2022 Jonathan Springer
+;
+; SPDX-License-Identifier: GPL-3.0-or-later
+
+; This file is part of pico-color-picker.
+;
+; pico-color-picker is free software: you can redistribute it and/or modify it under the
+; terms of the GNU General Public License as published by the Free Software
+; Foundation, either version 3 of the License, or (at your option) any later
+; version.
+;
+; pico-color-picker is distributed in the hope that it will be useful, but WITHOUT ANY
+; WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+; PARTICULAR PURPOSE. See the GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License along with
+; pico-color-picker. If not, see <https://www.gnu.org/licenses/>.
+;
+;  Portions of this code derived from the MicroPython Project, http://micropython.org
+;
+    ; The MIT License (MIT)
+    ;
+    ; SPDX-License-Identifier: MIT
+    ;
+    ; Copyright (c) 2018 Scott Shawcroft for Adafruit Industries
+    ;
+    ; Permission is hereby granted, free of charge, to any person obtaining a copy
+    ; of this software and associated documentation files (the "Software"), to deal
+    ; in the Software without restriction, including without limitation the rights
+    ; to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    ; copies of the Software, and to permit persons to whom the Software is
+    ; furnished to do so, subject to the following conditions:
+    ;
+    ; The above copyright notice and this permission notice shall be included in
+    ; all copies or substantial portions of the Software.
+    ;
+    ; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    ; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    ; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    ; AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    ; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    ; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+    ; THE SOFTWARE.
+
+.program rotary_encoder
+
+.wrap_target
+again:
+   in pins, 2            ;  Read the encoder pins
+   mov x, isr            ;  Store the current pins in X
+   jmp x!=y, push_data   ;  Has there been a change?
+   mov isr, null
+   jmp again             ;  A tight sample cycle takes 5 instructions
+push_data:
+   in y, 2               ;  Shift the prior data into the FIFO -- it now contains ABB'A'
+   push                  ;  Push the state transition information
+   mov y, x              ;  Save the new pin state
+.wrap
+
+% c-sdk {
+#include "hardware/clocks.h"
+/*
+ *  Note that the PIO requires two (2) sequential pins.  It will be up to the calling program to determine
+ *  whether CW/CCW events equate to positive or negative adjustments of the dial.
+ */
+static inline void rotary_encoder_program_init(PIO pio, uint sm, uint offset, uint pin1) {
+  pio_sm_set_consecutive_pindirs(pio, sm, pin1, 2, false);
+
+  pio_sm_config c = rotary_encoder_program_get_default_config(offset);
+  sm_config_set_in_pins(&c, pin1);
+  sm_config_set_in_shift(&c, false, false, 32);
+  sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
+
+  /*
+   *  Set frequency to ~1MHz, which means a sample rate of 200kHz.
+   *  We'll configure a high-band filter to filter out at ~1.6 MHz.
+   *  R=1kOhm; C=100pF
+   */
+  float div = clock_get_hz(clk_sys) / 1000000;
+  sm_config_set_clkdiv(&c, div);
+
+  pio_sm_init(pio, sm, offset, &c);
+}
+%}
