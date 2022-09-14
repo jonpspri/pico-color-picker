@@ -38,16 +38,15 @@
 bi_decl(bi_program_description("Piano driver."));
 #endif
 
+static uint8_t rgb_values[4];
 static uint32_t rgb_value, prior_rgb_value = 0x1000000;
 
 void process_rotary_encoder(uint8_t re_number, int8_t delta) {
-  uint8_t shift = re_number<<3;
-  int16_t value = rgb_value>>shift & 0xffu;
+  int16_t value = rgb_values[re_number];
   value += delta * ((~gpio_get_all() & (1<<BUTTON1_PIN|1<<BUTTON2_PIN)) ? 0x1u : 0x11u);
   value = MAX(value, 0);
   value = MIN(value, 0xff);
-  rgb_value &= ~(0xff<<shift);
-  rgb_value |= ((uint8_t)value)<<shift;
+  rgb_values[re_number] = value;
 };
 
 int main() {
@@ -76,9 +75,10 @@ int main() {
   ssd1306_clear(&disp);
 
   debug_printf("%s", "Initializing Rotary Encoders...");
-  rotary_encoder_init(2, "Red Encoder", ROTARY_ENCODER_RED_LOW_PIN, ROTARY_ENCODER_RED_INVERTED, process_rotary_encoder);
-  rotary_encoder_init(1, "Green Encoder", ROTARY_ENCODER_GREEN_LOW_PIN, ROTARY_ENCODER_GREEN_INVERTED, process_rotary_encoder);
-  rotary_encoder_init(0, "Blue Encoder", ROTARY_ENCODER_BLUE_LOW_PIN, ROTARY_ENCODER_BLUE_INVERTED, process_rotary_encoder);
+  rotary_encoder_register_encoder(ROTARY_ENCODER_RED_OFFSET, ROTARY_ENCODER_RED_INVERTED, process_rotary_encoder);
+  rotary_encoder_register_encoder(ROTARY_ENCODER_GREEN_OFFSET, ROTARY_ENCODER_GREEN_INVERTED, process_rotary_encoder);
+  rotary_encoder_register_encoder(ROTARY_ENCODER_BLUE_OFFSET, ROTARY_ENCODER_BLUE_INVERTED, process_rotary_encoder);
+  rotary_encoder_init_encoders(ROTARY_ENCODER_LOW_PIN);
 
   debug_printf("%s", "Initializing Buttons...");
   gpio_set_input_enabled(BUTTON1_PIN, true);
@@ -90,6 +90,9 @@ int main() {
   pico_ft2_set_font_size(14);
 
   while(true) {
+    rgb_value = rgb_values[ROTARY_ENCODER_RED_OFFSET]<<16
+      | rgb_values[ROTARY_ENCODER_GREEN_OFFSET]<<8
+      | rgb_values[ROTARY_ENCODER_BLUE_OFFSET];
     if(rgb_value == prior_rgb_value) continue;
 
     uint32_t pen_x, pen_y;

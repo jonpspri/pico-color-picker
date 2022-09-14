@@ -47,13 +47,13 @@
 
 .wrap_target
 again:
-   in pins, 2            ;  Read the encoder pins
+   in pins, 8            ;  Read the encoder pins
    mov x, isr            ;  Store the current pins in X
    jmp x!=y, push_data   ;  Has there been a change?
    mov isr, null
    jmp again             ;  A tight sample cycle takes 5 instructions
 push_data:
-   in y, 2               ;  Shift the prior data into the FIFO -- it now contains ABA'B'
+   in y, 8               ;  Shift the prior data into the FIFO -- it now contains ABA'B'
    push                  ;  Push the state transition information
    mov y, x              ;  Save the new pin state
 .wrap
