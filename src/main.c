@@ -59,11 +59,11 @@ int main() {
   ws281x_pio_init();
 
   debug_printf("%s", "Initializing I2C...");
-  i2c_init(i2c1, 400000);
-  gpio_set_function(18, GPIO_FUNC_I2C);
-  gpio_set_function(19, GPIO_FUNC_I2C);
-  gpio_pull_up(18);
-  gpio_pull_up(19);
+  i2c_init(SCREEN_I2C, 400000);
+  gpio_set_function(SCREEN_SDA_PIN, GPIO_FUNC_I2C);
+  gpio_set_function(SCREEN_SCL_PIN, GPIO_FUNC_I2C);
+  gpio_pull_up(SCREEN_SDA_PIN);
+  gpio_pull_up(SCREEN_SCL_PIN);
 
   debug_printf("%s", "Initializing Plex...");
   pico_ft2_init_otf();
@@ -72,7 +72,7 @@ int main() {
   debug_printf("%s", "Initializing Display...");
   ssd1306_t disp;
   disp.external_vcc=false;
-  ssd1306_init(&disp, 128, 32, 0x3C, i2c1);
+  ssd1306_init(&disp, SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_I2C_ADDRESS, SCREEN_I2C);
   ssd1306_clear(&disp);
 
   debug_printf("%s", "Initializing Rotary Encoders...");

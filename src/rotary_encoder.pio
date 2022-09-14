@@ -53,7 +53,7 @@ again:
    mov isr, null
    jmp again             ;  A tight sample cycle takes 5 instructions
 push_data:
-   in y, 2               ;  Shift the prior data into the FIFO -- it now contains ABB'A'
+   in y, 2               ;  Shift the prior data into the FIFO -- it now contains ABA'B'
    push                  ;  Push the state transition information
    mov y, x              ;  Save the new pin state
 .wrap

@@ -61,6 +61,12 @@ target_compile_definitions(pico_color_picker PRIVATE
   ROTARY_ENCODER_BLUE_INVERTED=false
   BUTTON1_PIN=6
   BUTTON2_PIN=7
+  SCREEN_I2C=i2c1
+  SCREEN_SDA_PIN=18
+  SCREEN_SCL_PIN=19
+  SCREEN_I2C_ADDRESS=0x3C
+  SCREEN_WIDTH=128
+  SCREEN_HEIGHT=32
   )
 
 target_include_directories(pico_color_picker PUBLIC
