@@ -25,10 +25,6 @@
 
 typedef void (*rotary_encoder_callback_function)(uint8_t re_number, int8_t delta);
 
-void rotary_encoder_init(
-    uint8_t re_number,
-    const char *name,
-    uint8_t pin,
-    bool reverse,
-    rotary_encoder_callback_function callback);
+void rotary_encoder_register_encoder( uint8_t re_number, bool inverted, rotary_encoder_callback_function callback);
+void rotary_encoder_init_encoders(uint8_t pin);
 #endif

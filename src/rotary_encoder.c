@@ -57,23 +57,23 @@
 #define GPIO_FUNC_PIOx __CONCAT(GPIO_FUNC_PIO, ROTARY_ENCODER_PIO)
 
 typedef struct {
-  uint8_t rx;
-  uint8_t idx;
+  uint16_t rx;
+  uint16_t idx;
   int8_t delta;
   int8_t sub_count;
 } transition_history_t;
+uint8_t transition_history_idx;
+transition_history_t transition_history[256];
+
+uint32_t prior_state;
 
 typedef struct {
-  const char *name;
   bool inverted;
-  uint32_t prior_state;  /* Use 32 bits to ease integration with the PIO RX FIFO */
   int8_t sub_count;
   rotary_encoder_callback_function callback;
-  uint8_t transition_history_idx;
   transition_history_t *transition_history;
 } rotary_encoder_info;
 
-static uint8_t program_offset = 0xffu;
 static rotary_encoder_info rotary_encoders[NUM_PIO_STATE_MACHINES];
 static uint8_t active_encoders_bitmask = 0u;
 
@@ -96,92 +96,88 @@ static const int8_t transitions[16] = {
         0,    // F 11 -> 11 no movement
 };
 
-static void rotary_encoder_interrupt_handler(PIO pio, uint8_t sm, void *re_in) {
-  rotary_encoder_info *re = (rotary_encoder_info *)re_in;
+static void rotary_encoder_interrupt_handler(PIO pio, uint8_t sm, void *filler) {
 
   while(pio_sm_get_rx_fifo_level(pio, sm)) {
+    uint16_t rx16 = pio_sm_get(pio, sm);
+    transition_history[transition_history_idx].rx = (uint16_t)rx16;
     /*
-     * Step 1 - decipher the 4 bits coming from the PIO
+     * Step 1 - decipher the bits coming from the PIO
      */
-    uint32_t rx = pio_sm_get(pio, sm);   /*  Arrives as ABB'A' (or BAA'B') */
-    uint8_t prior_state, new_state;
-    if (re->inverted) {
-      prior_state = (rx & 0x3u)>>1 | (rx & 0x1u)<<1;  /* XXB'A' -> A'B' */
-      new_state = (rx & 0x8u)>>3 | (rx & 0x4u)>>1;    /* BAXX -> AB */
-    } else {
-      prior_state = rx & 0x3u;                        /* XXA'B' -> A'B' */
-      new_state = (rx & 0xCu)>>2;                     /* ABXX -> AB */
-    }
+    for(int i=0; i<4; i++) {
+      rotary_encoder_info *re = &rotary_encoders[i];
+      if(!re->callback) { continue; }
 
-    /*
-     * Step 2 - construct an index to the callback table
-     */
-    assert(new_state != prior_state);  /*  The PIO should filter this case out already */
-    uint32_t idx = prior_state<<2 | new_state;
+      uint16_t rx = rx16>>(i*2);
+      uint8_t prior_state, new_state;
+      if (re->inverted) {
+        prior_state = (rx & 0x2u)>>1 | (rx & 0x1u)<<1;  /* X...XB'A' -> A'B' */
+        new_state = (rx & 0x100u)>>7 | (rx & 0x200u)>>9;    /* BAX..X -> AB */
+      } else {
+        prior_state = rx & 0x3u;                        /* X..XA'B' -> A'B' */
+        new_state = (rx & 0x300u)>>8;                     /* ABX..X -> AB */
+      }
+      if(new_state == prior_state) continue;
 
-    /*
-     * Step 3 - adjust the sub-count (between-detent clicks) and callback if we hit a detent
-     */
-    re->sub_count += transitions[idx];
-    if (re->sub_count >= ROTARY_ENCODER_DIVISOR) {
-      re->callback(sm, 1);
-      re->sub_count = 0;
-    } else if (re->sub_count <= ROTARY_ENCODER_DIVISOR * -1) {
-      re->callback(sm, -1);
-      re->sub_count = 0;
+      /*
+       * Step 2 - construct an index to the callback table
+       */
+      uint32_t idx = prior_state<<2 | new_state;
+
+      /*
+       * Step 3 - adjust the sub-count (between-detent clicks) and callback if we hit a detent
+       */
+      re->sub_count += transitions[idx];
+      if (re->sub_count >= ROTARY_ENCODER_DIVISOR) {
+        re->callback(i, 1);
+        re->sub_count = 0;
+      } else if (re->sub_count <= ROTARY_ENCODER_DIVISOR * -1) {
+        re->callback(i, -1);
+        re->sub_count = 0;
+      }
+      re->transition_history[transition_history_idx].rx = rx;
+      re->transition_history[transition_history_idx].idx = idx;
+      re->transition_history[transition_history_idx].delta = transitions[idx];
+      re->transition_history[transition_history_idx].sub_count = re->sub_count;
+      transition_history_idx++;
     }
-    re->transition_history[re->transition_history_idx].rx = rx;
-    re->transition_history[re->transition_history_idx].idx = idx;
-    re->transition_history[re->transition_history_idx].delta = transitions[idx];
-    re->transition_history[re->transition_history_idx].sub_count = re->sub_count;
-    re->transition_history_idx++;
   }
 }
 
-void rotary_encoder_init(
+void rotary_encoder_register_encoder(
     uint8_t re_number,
-    const char *name,
-    uint8_t pin,
     bool inverted,
     rotary_encoder_callback_function callback
 ) {
-  assert(re_number < NUM_PIO_STATE_MACHINES);
-  assert(pin < 31);  /* Should probably be <21, but I can't quite bring myself to do that... */
-
-  for(uint8_t i=0; i<2; i++) {
-    gpio_set_function(pin+i, GPIO_FUNC_PIOx);
-    gpio_set_input_enabled(pin+i, true);
-    gpio_pull_up(pin+i);
-  }
-
-  pio_sm_claim(PIOx, re_number);
-
-  if (program_offset >= 32) {
-    program_offset = pio_add_program(PIOx, &rotary_encoder_program);
-  }
-
-  rotary_encoders[re_number].name = name;
   rotary_encoders[re_number].inverted = inverted;
-  rotary_encoders[re_number].prior_state = ( gpio_get_all() >> pin ) & 3u;
   rotary_encoders[re_number].callback = callback;
-  rotary_encoders[re_number].transition_history_idx = 0;
-  rotary_encoders[re_number].transition_history = calloc(sizeof(transition_history_t),256);
+  rotary_encoders[re_number].transition_history = calloc(sizeof(transition_history_t), 256);
+}
 
-  rotary_encoder_program_init(PIOx, re_number, program_offset, pin);
-  active_encoders_bitmask |= 1u << re_number;
+void rotary_encoder_init_encoders(uint8_t low_pin) {
+  for(uint8_t re=0; re<4; re++) {
+    if(!rotary_encoders[re].callback) continue;
+    for(uint8_t i=0; i<2; i++) {
+      uint8_t pin = ROTARY_ENCODER_LOW_PIN + re*2 + i;
+      gpio_set_function(pin, GPIO_FUNC_PIOx);
+      gpio_set_input_enabled(pin, true);
+      gpio_pull_up(pin);
+    }
+  }
+  pio_sm_claim(PIOx, ROTARY_ENCODER_SM);
+  uint8_t program_offset = pio_add_program(PIOx, &rotary_encoder_program);
+  rotary_encoder_program_init(PIOx, ROTARY_ENCODER_SM, program_offset, ROTARY_ENCODER_LOW_PIN);
 
-  /*  A moment of truth -- moving 31 into y should ensure that there is some
-   *  data in the RX FIFO.  */
-  pio_sm_exec(PIOx, re_number, 0xe05f);  /* set y, 31 - guarantee a first push */
-  pio_sm_set_enabled(PIOx, re_number, true);
-  debug_printf("State Machine %d initialized... getting first item.", re_number);
-  rotary_encoders[re_number].prior_state = pio_sm_get(PIOx, re_number);
-  debug_printf("Received value %lx from State Machine %d", rotary_encoders[re_number].prior_state, re_number);
+  pio_sm_exec(PIOx, ROTARY_ENCODER_SM, 0xe040);  /* set y, 0 */
+  pio_sm_exec(PIOx, ROTARY_ENCODER_SM, 0xa04a);  /* mov y, !y - make y 0xffff - guarantee a PUSH */
+  pio_sm_set_enabled(PIOx, ROTARY_ENCODER_SM, true);
+
+  /*  A moment of truth -- filling y should ensure that there is some data in the RX FIFO.  */
+  prior_state = pio_sm_get_blocking(PIOx, ROTARY_ENCODER_SM);
 
   /*  Now that the pump is primed, it's time to enable the interrupts for the
    *  PIO.  */
-  pio_irq_set_handler(PIOx, re_number,
-      rotary_encoder_interrupt_handler, &rotary_encoders[re_number],
+  pio_irq_set_handler(PIOx, ROTARY_ENCODER_SM,
+      rotary_encoder_interrupt_handler, NULL,
       PIO_INTR_SM0_RXNEMPTY_BITS);
-  debug_printf("IRQ Handler set up for State Machine %d", re_number);
 }
