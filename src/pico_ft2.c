@@ -25,8 +25,14 @@
 #include "ssd1306.h"
 #include "pico_ft2.h"
 
+#ifndef FT2_DEBUG
+#define FT2_DEBUG 0
+#endif
+
 extern FT_Byte _binary_IBMPlexMono_Regular_otf_start;
 extern uint32_t _binary_IBMPlexMono_Regular_otf_size;
+extern FT_Byte _binary_IBMPlexMono_Light_otf_start;
+extern uint32_t _binary_IBMPlexMono_Light_otf_size;
 
 
 static FT_Library ft_library;
@@ -42,8 +48,8 @@ void pico_ft2_init_otf() {
 
     debug_printf("%s", "FT_New_Memory_Face...");
     error = FT_New_Memory_Face( ft_library,
-        &_binary_IBMPlexMono_Regular_otf_start,
-        (FT_Long) &_binary_IBMPlexMono_Regular_otf_size,
+        &_binary_IBMPlexMono_Light_otf_start,
+        (FT_Long) &_binary_IBMPlexMono_Light_otf_size,
         0, &ft_face );
     if(error) {
         debug_printf("FT_New_Memory_Face failed: %s", FT_Error_String(error));
@@ -86,10 +92,17 @@ void pico_ft2_render_char(uint32_t *pen_x, uint32_t *pen_y, FT_ULong char_code, 
         debug_printf("FT_Load_Char failed: %s", FT_Error_String(error));
     }
 
+    debug_printf("Rendering char %02x; width is %d", char_code, ft_face->glyph->bitmap.width);
+
     for (uint32_t row=0; row < ft_face->glyph->bitmap.rows; row++) {
         unsigned char *row_bytes = &(ft_face->glyph->bitmap.buffer[row*ft_face->glyph->bitmap.pitch]);
+#if FT2_DEBUG
+        for (int i=0; i<ft_face->glyph->bitmap.pitch; i++)
+            fprintf(stderr, BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(row_bytes[i]));
+        printf("\n");
+#endif
         for (int col=0; col < ft_face->glyph->bitmap.width; col++) {
-            if(row_bytes[col>>3] & (1<<((7-col)%8))) {
+            if(row_bytes[col>>3] & (1<<(7-(col&0x7u)))) {
                 uint32_t x = *pen_x + ft_face->glyph->bitmap_left + col;
                 uint32_t y = *pen_y - ft_face->glyph->bitmap_top + row;
                 draw(canvas, x, y);

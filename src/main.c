@@ -52,27 +52,14 @@ void process_rotary_encoder(uint8_t re_number, int8_t delta) {
 int main() {
   stdio_init_all();
 #if LIB_PICO_STDIO_USB && DEBUG
-  //while (!stdio_usb_connected()) { sleep_ms(100);  }
+  while (!stdio_usb_connected()) { sleep_ms(100);  }
 #endif
   debug_printf("%s", "Initializing PIO...");
   ws281x_pio_init();
 
-  debug_printf("%s", "Initializing I2C...");
-  i2c_init(SCREEN_I2C, 400000);
-  gpio_set_function(SCREEN_SDA_PIN, GPIO_FUNC_I2C);
-  gpio_set_function(SCREEN_SCL_PIN, GPIO_FUNC_I2C);
-  gpio_pull_up(SCREEN_SDA_PIN);
-  gpio_pull_up(SCREEN_SCL_PIN);
-
   debug_printf("%s", "Initializing Plex...");
   pico_ft2_init_otf();
   pico_ft2_set_font_size(12);
-
-  debug_printf("%s", "Initializing Display...");
-  ssd1306_t disp;
-  disp.external_vcc=false;
-  ssd1306_init(&disp, SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_I2C_ADDRESS, SCREEN_I2C);
-  ssd1306_clear(&disp);
 
   debug_printf("%s", "Initializing Rotary Encoders...");
   rotary_encoder_register_encoder(ROTARY_ENCODER_RED_OFFSET, ROTARY_ENCODER_RED_INVERTED, process_rotary_encoder);
@@ -86,8 +73,24 @@ int main() {
   gpio_set_input_enabled(BUTTON2_PIN, true);
   gpio_pull_up(BUTTON2_PIN);
 
+  /* It seems the screen needs to warm up */
+  sleep_ms(500);
+
+  debug_printf("%s", "Initializing I2C...");
+  i2c_init(SCREEN_I2C, 400000);
+  gpio_set_function(SCREEN_SDA_PIN, GPIO_FUNC_I2C);
+  gpio_set_function(SCREEN_SCL_PIN, GPIO_FUNC_I2C);
+  gpio_pull_up(SCREEN_SDA_PIN);
+  gpio_pull_up(SCREEN_SCL_PIN);
+
+  debug_printf("%s", "Initializing Display...");
+  ssd1306_t disp;
+  disp.external_vcc=false;
+  ssd1306_init(&disp, SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_I2C_ADDRESS, SCREEN_I2C);
+  ssd1306_clear(&disp);
+
   char hex_color_value[8];
-  pico_ft2_set_font_size(14);
+  pico_ft2_set_font_size(12);
 
   while(true) {
     rgb_value = rgb_values[ROTARY_ENCODER_RED_OFFSET]<<16
