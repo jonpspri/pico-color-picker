@@ -43,17 +43,24 @@
     ; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
     ; THE SOFTWARE.
 
-.program rotary_encoder
+;
+;  This program was originally created for detecting state changes in rotary encoders but,
+;  remarkably, it works really well for monitoring a bunch of buttons, too.  So the comments
+;  talk about encoders but really it just looks for changes in values across a group of
+;  8 pins.  It's up to the receiving program to figure out what those value changes
+;  actually mean.
+;
+.program io_devices_8
 
 .wrap_target
 again:
-   in pins, 8            ;  Read the encoder pins
+   in pins, 8            ;  Read the encoder pins (or button pins)
    mov x, isr            ;  Store the current pins in X
    jmp x!=y, push_data   ;  Has there been a change?
    mov isr, null
    jmp again             ;  A tight sample cycle takes 5 instructions
 push_data:
-   in y, 8               ;  Shift the prior data into the FIFO -- it now contains ABA'B'
+   in y, 8               ;  Shift the prior data into the FIFO -- it now contains ABA'B' (for rotary encoders)
    push                  ;  Push the state transition information
    mov y, x              ;  Save the new pin state
 .wrap
@@ -64,18 +71,16 @@ push_data:
  *  Note that the PIO requires two (2) sequential pins.  It will be up to the calling program to determine
  *  whether CW/CCW events equate to positive or negative adjustments of the dial.
  */
-static inline void rotary_encoder_program_init(PIO pio, uint sm, uint offset, uint pin1) {
-  pio_sm_set_consecutive_pindirs(pio, sm, pin1, 2, false);
+static inline void io_devices_8_program_init(PIO pio, uint sm, uint offset, uint pin1) {
+  pio_sm_set_consecutive_pindirs(pio, sm, pin1, 8, false);
 
-  pio_sm_config c = rotary_encoder_program_get_default_config(offset);
+  pio_sm_config c = io_devices_8_program_get_default_config(offset);
   sm_config_set_in_pins(&c, pin1);
   sm_config_set_in_shift(&c, false, false, 32);
   sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
 
   /*
    *  Set frequency to ~1MHz, which means a sample rate of 200kHz.
-   *  We'll configure a high-band filter to filter out at ~1.6 MHz.
-   *  R=1kOhm; C=100pF
    */
   float div = clock_get_hz(clk_sys) / 1000000;
   sm_config_set_clkdiv(&c, div);

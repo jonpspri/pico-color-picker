@@ -79,7 +79,7 @@ void ws281x_sparkle_pixels(uint16_t rgb_count, uint32_t *rgbs) {
     sem_acquire_blocking(&reset_delay_complete_sem);
     grbs_count = rgb_count;
     for (int i=0; i<rgb_count; i++) {
-        debug_printf("Color %d/%d: %06lx", i, rgb_count, rgbs[i]);
+        /* debug_printf("Color %d/%d: %06lx", i, rgb_count, rgbs[i]); */
         grbs[i] = urgb_u32(rgbs[i]);
     }
     multicore_reset_core1();

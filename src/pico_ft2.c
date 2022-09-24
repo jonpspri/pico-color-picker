@@ -40,23 +40,18 @@ static FT_Face ft_face;
 
 void pico_ft2_init_otf() {
     FT_Error error;
-    debug_printf("%s", "FT_Init_FreeType...");
+    /* debug_printf("%s", "FT_Init_FreeType..."); */
     error = FT_Init_FreeType( &ft_library );
-    if(error) {
-        debug_printf("FT_Init_FreeType failed: %s", FT_Error_String(error));
-    }
+    if(error) debug_printf("FT_Init_FreeType failed: %s", FT_Error_String(error));
 
-    debug_printf("%s", "FT_New_Memory_Face...");
+    /* debug_printf("%s", "FT_New_Memory_Face..."); */
     error = FT_New_Memory_Face( ft_library,
         &_binary_IBMPlexMono_Light_otf_start,
         (FT_Long) &_binary_IBMPlexMono_Light_otf_size,
         0, &ft_face );
-    if(error) {
-        debug_printf("FT_New_Memory_Face failed: %s", FT_Error_String(error));
-    }
+    if(error) debug_printf("FT_New_Memory_Face failed: %s", FT_Error_String(error));
 
-    debug_printf("Loaded %s %s", ft_face->family_name, ft_face->style_name);
-
+    /* debug_printf("Loaded %s %s", ft_face->family_name, ft_face->style_name); */
 }
 
 void pico_ft2_set_font_size(FT_Long size) {
@@ -66,11 +61,9 @@ void pico_ft2_set_font_size(FT_Long size) {
     };
 
     FT_Error error;
-    debug_printf("Requesting font size %ld", size);
+    /* debug_printf("Requesting font size %ld", size); */
     error = FT_Request_Size(ft_face, &ft_size_request);
-    if(error) {
-        debug_printf("FT_Request_Size failed: %s", FT_Error_String(error));
-    }
+    if(error) debug_printf("FT_Request_Size failed: %s", FT_Error_String(error));
 }
 
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
@@ -88,11 +81,9 @@ void pico_ft2_render_char(uint32_t *pen_x, uint32_t *pen_y, FT_ULong char_code, 
     FT_Error error;
     error = FT_Load_Char( ft_face, char_code,
             FT_LOAD_RENDER | FT_LOAD_MONOCHROME | FT_LOAD_TARGET_MONO);
-    if(error) {
-        debug_printf("FT_Load_Char failed: %s", FT_Error_String(error));
-    }
+    if(error) debug_printf("FT_Load_Char failed: %s", FT_Error_String(error));
 
-    debug_printf("Rendering char %02x; width is %d", char_code, ft_face->glyph->bitmap.width);
+    /* debug_printf("Rendering char %02x; width is %d", char_code, ft_face->glyph->bitmap.width); */
 
     for (uint32_t row=0; row < ft_face->glyph->bitmap.rows; row++) {
         unsigned char *row_bytes = &(ft_face->glyph->bitmap.buffer[row*ft_face->glyph->bitmap.pitch]);
@@ -116,9 +107,7 @@ void pico_ft2_render_char(uint32_t *pen_x, uint32_t *pen_y, FT_ULong char_code, 
 void pico_ft2_set_initial_pen_from_top_left(uint32_t x, uint32_t y, uint32_t *pen_x, uint32_t *pen_y) {
     FT_Error error;
     error = FT_Load_Char( ft_face, 'l', FT_LOAD_RENDER | FT_LOAD_MONOCHROME | FT_LOAD_TARGET_MONO);
-    if(error) {
-        debug_printf("FT_Load_Char failed: %s", FT_Error_String(error));
-    }
+    if(error) debug_printf("FT_Load_Char failed: %s", FT_Error_String(error));
 
     *pen_x = x;
     *pen_y = y + ft_face->glyph->bitmap_top;

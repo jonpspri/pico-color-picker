@@ -28,8 +28,7 @@ add_executable(pico_color_picker
   ws281x.c
   ssd1306.c
   pico_ft2.c
-  pio_irq.c
-  rotary_encoder.c
+  io_devices.c
 )
 
 pico_generate_pio_header(pico_color_picker
@@ -37,7 +36,7 @@ pico_generate_pio_header(pico_color_picker
 pico_generate_pio_header(pico_color_picker
   ${CMAKE_CURRENT_LIST_DIR}/ws2813b.pio)
 pico_generate_pio_header(pico_color_picker
-  ${CMAKE_CURRENT_LIST_DIR}/rotary_encoder.pio)
+  ${CMAKE_CURRENT_LIST_DIR}/io_devices.pio)
 
 pico_enable_stdio_usb(pico_color_picker 1)
 pico_enable_stdio_uart(pico_color_picker 0)
@@ -51,7 +50,9 @@ target_compile_definitions(pico_color_picker PRIVATE
   PICO_WS2813B_PIN=3
   WS2812_PIXEL_COUNT=3
   WS2813B_PIXEL_COUNT=14
-  ROTARY_ENCODER_PIO=1
+
+  IO_DEVICES_PIO=1
+
   ROTARY_ENCODER_SM=0
   ROTARY_ENCODER_DIVISOR=4
   ROTARY_ENCODER_LOW_PIN=14
@@ -61,8 +62,15 @@ target_compile_definitions(pico_color_picker PRIVATE
   ROTARY_ENCODER_GREEN_INVERTED=true
   ROTARY_ENCODER_BLUE_OFFSET=3
   ROTARY_ENCODER_BLUE_INVERTED=false
-  BUTTON1_PIN=6
-  BUTTON2_PIN=7
+
+  BUTTON_SM=1
+  BUTTON_LOW_PIN=6
+  BUTTON_UPPER_OFFSET=0
+  BUTTON_LOWER_OFFSET=1
+  BUTTON_RED_OFFSET=7
+  BUTTON_GREEN_OFFSET=6
+  BUTTON_BLUE_OFFSET=5
+
   SCREEN_I2C=i2c1
   SCREEN_SDA_PIN=18
   SCREEN_SCL_PIN=19
@@ -76,6 +84,8 @@ target_include_directories(pico_color_picker PUBLIC
   )
 
 target_link_libraries(pico_color_picker PRIVATE
+  FreeRTOS-Kernel
+  FreeRTOS-Kernel-Heap1
   pico_stdlib
   pico_binary_info
   pico_multicore

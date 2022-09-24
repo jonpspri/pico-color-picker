@@ -23,8 +23,9 @@
 
 #include "pico/stdlib.h"
 
-typedef void (*rotary_encoder_callback_function)(uint8_t re_number, int8_t delta);
+void io_devices_register_encoder(uint8_t re_number, bool inverted);
+void io_devices_init_encoders(uint8_t pin, uint8_t sm);
+void io_devices_register_button(uint8_t button_number);
+void io_devices_init_buttons(uint8_t pin, uint8_t sm);
 
-void rotary_encoder_register_encoder( uint8_t re_number, bool inverted, rotary_encoder_callback_function callback);
-void rotary_encoder_init_encoders(uint8_t pin);
 #endif

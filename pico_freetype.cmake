@@ -64,11 +64,10 @@ add_library(freetype OBJECT
 )
 
 target_include_directories(freetype BEFORE PUBLIC
-  ${CMAKE_SOURCE_DIR}/include
+  ${CMAKE_SOURCE_DIR}/config
   ${CMAKE_SOURCE_DIR}/freetype/include
   )
 
 target_compile_definitions(freetype PRIVATE
   FT2_BUILD_LIBRARY=1
-  FT_CONFIG_OPTION_ERROR_STRINGS=1
   )
