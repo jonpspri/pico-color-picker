@@ -30,7 +30,7 @@
 #include "hardware/gpio.h"
 #include "hardware/i2c.h"
 
-#include "pico_debug.h"
+#include "log.h"
 #include "ws281x.h"
 #include "pico_ft2.h"
 #include "ssd1306.h"
@@ -181,12 +181,12 @@ void task_screen(void *parm) {
   /*  The screen needs a little time to warm up  */
   vTaskDelay(400 / portTICK_PERIOD_MS);
 
-  debug_printf("%s", "Initializing Display...");
+  log_info("%s", "Initializing Display...");
   disp.external_vcc=false;
   ssd1306_init(&disp, SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_I2C_ADDRESS, SCREEN_I2C);
   ssd1306_clear(&disp);
   ssd1306_show(&disp);
-  debug_printf("%s", "Display Initialized...");
+  log_info("%s", "Display Initialized...");
 
   for( ;; ) {
     if (!xTaskNotifyWaitIndexed( 1, 0u, ULONG_MAX, &rgb, portMAX_DELAY)) continue;
@@ -207,30 +207,33 @@ void task_screen(void *parm) {
 
 int main() {
   stdio_init_all();
-#if LIB_PICO_STDIO_USB && DEBUG
+#if LIB_PICO_STDIO_USB && !defined(NDEBUG)
   while (!stdio_usb_connected()) { sleep_ms(100); }
 #endif
-  debug_printf("%s", "Initializing PIO...");
+#ifdef LOG_LEVEL
+  log_set_level(LOG_LEVEL);
+#endif
+  log_info("%s", "Initializing PIO...");
   ws281x_pio_init();
 
-  debug_printf("%s", "Initializing Plex...");
+  log_info("%s", "Initializing Plex...");
   pico_ft2_init_otf();
   pico_ft2_set_font_size(12);
 
-  debug_printf("%s", "Initializing Rotary Encoders...");
+  log_info("%s", "Initializing Rotary Encoders...");
   rgb_encoders_init();
   io_devices_register_encoder(ROTARY_ENCODER_RED_OFFSET, ROTARY_ENCODER_RED_INVERTED);
   io_devices_register_encoder(ROTARY_ENCODER_GREEN_OFFSET, ROTARY_ENCODER_GREEN_INVERTED);
   io_devices_register_encoder(ROTARY_ENCODER_BLUE_OFFSET, ROTARY_ENCODER_BLUE_INVERTED);
 
-  debug_printf("%s", "Initializing Buttons...");
+  log_info("%s", "Initializing Buttons...");
   io_devices_register_button(BUTTON_UPPER_OFFSET);
   io_devices_register_button(BUTTON_LOWER_OFFSET);
   io_devices_register_button(BUTTON_RED_OFFSET);
   io_devices_register_button(BUTTON_GREEN_OFFSET);
   io_devices_register_button(BUTTON_BLUE_OFFSET);
 
-  debug_printf("%s", "Initializing I2C...");
+  log_info("%s", "Initializing I2C...");
   i2c_init(SCREEN_I2C, 400000);
   gpio_set_function(SCREEN_SDA_PIN, GPIO_FUNC_I2C);
   gpio_set_function(SCREEN_SCL_PIN, GPIO_FUNC_I2C);

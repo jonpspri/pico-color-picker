@@ -32,6 +32,13 @@ add_library(freetype OBJECT
   freetype/src/psaux/psaux.c
   freetype/src/raster/raster.c
 
+  #
+  #  All of this stuff has been configured out for the time
+  #  being.  It will be left here as comments to ease
+  #  bringing it in if we start to use more of the FreeType
+  #  capabilities.
+  #
+
   # freetype/src/autofit/autofit.c
   # freetype/src/base/ftcid.c
   # freetype/src/base/ftfstype.c

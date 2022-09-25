@@ -29,6 +29,7 @@ add_executable(pico_color_picker
   ssd1306.c
   pico_ft2.c
   io_devices.c
+  log.c/src/log.c
 )
 
 pico_generate_pio_header(pico_color_picker
@@ -77,10 +78,14 @@ target_compile_definitions(pico_color_picker PRIVATE
   SCREEN_I2C_ADDRESS=0x3C
   SCREEN_WIDTH=128
   SCREEN_HEIGHT=32
+
+  LOG_USE_COLOR
+  LOG_LEVEL=LOG_DEBUG
   )
 
 target_include_directories(pico_color_picker PUBLIC
   ${CMAKE_SOURCE_DIR}/freetype/include
+  log.c/src
   )
 
 target_link_libraries(pico_color_picker PRIVATE

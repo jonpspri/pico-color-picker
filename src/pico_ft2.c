@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: 2022 Jonathan Springer
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
-
+ *
  * This file is part of pico-color-picker.
  *
  * pico-color-picker is free software: you can redistribute it and/or modify it under the
@@ -21,37 +21,47 @@
 #include <ft2build.h>
 #include <freetype/freetype.h>
 
-#include "pico_debug.h"
+#include "log.h"
 #include "ssd1306.h"
 #include "pico_ft2.h"
 
-#ifndef FT2_DEBUG
-#define FT2_DEBUG 0
-#endif
+/*------------------------------------------------------------------------------
+ *
+ * FreeType 2 definitions here, including a couple fonts that have been inlined
+ *
+ * Some notes on IBM Plex Mono sizing:
+ *    12 Point seems appropriate for 16-pixel high text (2 lines on a 128x32 display)
+ */
 
 extern FT_Byte _binary_IBMPlexMono_Regular_otf_start;
 extern uint32_t _binary_IBMPlexMono_Regular_otf_size;
 extern FT_Byte _binary_IBMPlexMono_Light_otf_start;
 extern uint32_t _binary_IBMPlexMono_Light_otf_size;
 
-
 static FT_Library ft_library;
 static FT_Face ft_face;
 
+/*------------------------------------------------------------------------------
+ *
+ * TODO:  Some form of Glyph caching.
+ *        Parameterized "Face" and multiple initialized faces.
+ */
 void pico_ft2_init_otf() {
     FT_Error error;
-    /* debug_printf("%s", "FT_Init_FreeType..."); */
     error = FT_Init_FreeType( &ft_library );
-    if(error) debug_printf("FT_Init_FreeType failed: %s", FT_Error_String(error));
+    if(error) log_error("FT_Init_FreeType failed: %s", FT_Error_String(error));
 
-    /* debug_printf("%s", "FT_New_Memory_Face..."); */
     error = FT_New_Memory_Face( ft_library,
         &_binary_IBMPlexMono_Light_otf_start,
         (FT_Long) &_binary_IBMPlexMono_Light_otf_size,
         0, &ft_face );
-    if(error) debug_printf("FT_New_Memory_Face failed: %s", FT_Error_String(error));
+    if(error) log_error("FT_New_Memory_Face failed: %s", FT_Error_String(error));
 
-    /* debug_printf("Loaded %s %s", ft_face->family_name, ft_face->style_name); */
+    log_info("Loaded %s %s", ft_face->family_name, ft_face->style_name);
+    log_info("Units per em: %d", ft_face->units_per_EM);
+    log_info("Bounding Box: (%d,%d)-(%d,%d)",
+            ft_face->bbox.xMin, ft_face->bbox.yMin,
+            ft_face->bbox.xMax, ft_face->bbox.yMax);
 }
 
 void pico_ft2_set_font_size(FT_Long size) {
@@ -61,9 +71,9 @@ void pico_ft2_set_font_size(FT_Long size) {
     };
 
     FT_Error error;
-    /* debug_printf("Requesting font size %ld", size); */
+    log_info("Requesting font size %ld", size);
     error = FT_Request_Size(ft_face, &ft_size_request);
-    if(error) debug_printf("FT_Request_Size failed: %s", FT_Error_String(error));
+    if(error) log_error("FT_Request_Size failed: %s", FT_Error_String(error));
 }
 
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
@@ -81,9 +91,9 @@ void pico_ft2_render_char(uint32_t *pen_x, uint32_t *pen_y, FT_ULong char_code, 
     FT_Error error;
     error = FT_Load_Char( ft_face, char_code,
             FT_LOAD_RENDER | FT_LOAD_MONOCHROME | FT_LOAD_TARGET_MONO);
-    if(error) debug_printf("FT_Load_Char failed: %s", FT_Error_String(error));
+    if(error) log_error("FT_Load_Char failed: %s", FT_Error_String(error));
 
-    /* debug_printf("Rendering char %02x; width is %d", char_code, ft_face->glyph->bitmap.width); */
+    log_trace("Rendering char %02x; width is %d", char_code, ft_face->glyph->bitmap.width);
 
     for (uint32_t row=0; row < ft_face->glyph->bitmap.rows; row++) {
         unsigned char *row_bytes = &(ft_face->glyph->bitmap.buffer[row*ft_face->glyph->bitmap.pitch]);
@@ -104,10 +114,15 @@ void pico_ft2_render_char(uint32_t *pen_x, uint32_t *pen_y, FT_ULong char_code, 
     (*pen_y) += ft_face->glyph->advance.y>>6;
 }
 
+/*------------------------------------------------------------------------------*
+ *
+ * TO DO:  There has to be some more deterministic way to do this based on the
+ *         face, doesn't there?
+ */
 void pico_ft2_set_initial_pen_from_top_left(uint32_t x, uint32_t y, uint32_t *pen_x, uint32_t *pen_y) {
     FT_Error error;
     error = FT_Load_Char( ft_face, 'l', FT_LOAD_RENDER | FT_LOAD_MONOCHROME | FT_LOAD_TARGET_MONO);
-    if(error) debug_printf("FT_Load_Char failed: %s", FT_Error_String(error));
+    if(error) log_error("FT_Load_Char failed: %s", FT_Error_String(error));
 
     *pen_x = x;
     *pen_y = y + ft_face->glyph->bitmap_top;

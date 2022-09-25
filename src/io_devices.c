@@ -51,7 +51,7 @@
 #include "hardware/pio.h"
 
 #include "io_devices.h"
-#include "pico_debug.h"
+#include "log.h"
 
 #include "io_devices.pio.h"
 
@@ -252,7 +252,7 @@ void io_devices_register_button( uint8_t button_number) {
 }
 
 void io_devices_init_encoders(uint8_t low_pin, uint8_t sm) {
-  debug_printf("Initializing encoders on SM %d", sm);
+  log_trace("Initializing encoders on SM %d", sm);
   for(uint8_t re=0; re<4; re++) {
     if(!rotary_encoders[re].enabled) continue;
     for(uint8_t i=0; i<2; i++) init_pin(low_pin + re*2 + i);
@@ -264,7 +264,7 @@ void io_devices_init_encoders(uint8_t low_pin, uint8_t sm) {
 }
 
 void io_devices_init_buttons(uint8_t low_pin, uint8_t sm) {
-  debug_printf("Initializing buttons on SM %d", sm);
+  log_trace("Initializing buttons on SM %d", sm);
   for(uint8_t b=0; b<8; b++) {
     if(buttons[b].enabled) init_pin(low_pin + b);
   }
