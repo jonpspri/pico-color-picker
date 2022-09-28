@@ -2,5 +2,5 @@
 	path = FreeRTOS-Kernel
 	url = https://github.com/FreeRTOS/FreeRTOS-Kernel.git
 [submodule "src/log.c"]
-	path = src/log.c
+	path = src/logger
 	url = https://github.com/rxi/log.c.git
