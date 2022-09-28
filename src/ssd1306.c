@@ -31,7 +31,7 @@ SOFTWARE.
 #include <stdio.h>
 
 #include "ssd1306.h"
-#include "font.h"
+#include "log.h"
 
 inline static void swap(uint32_t *a, uint32_t *b) {
     uint32_t *t=a;
@@ -181,33 +181,34 @@ void ssd13606_draw_empty_square(ssd1306_t *p, uint32_t x, uint32_t y, uint32_t w
     ssd1306_draw_line(p, x, y, x, y+height);
     ssd1306_draw_line(p, x+width, y, x+width, y+height);
 }
+static int compare_uint16_t (const void * a, const void * b)
+{
+      return ( *(uint16_t *)a - *(uint16_t*)b );
+}
 
-void ssd1306_draw_char_with_font(ssd1306_t *p, uint32_t x, uint32_t y, uint32_t scale, const uint8_t *font, char c) {
-    if(c > '~')
+void ssd1306_draw_char_with_font(ssd1306_t *p, uint32_t x, uint32_t y, uint32_t scale, const struct bitmap_font *font, uint16_t c) {
+    uint16_t *c_index_ptr = (uint16_t *)
+        bsearch(&c, font->Index, sizeof(uint16_t), sizeof(uint16_t), compare_uint16_t);
+    if(!c_index_ptr) {
+        log_error("Character %d not found in font.");
         return;
+    }
 
-    for(uint8_t i=0; i<font[1]; ++i) {
-        uint8_t line=(uint8_t)(font[(c-0x20)*font[1]+i+2]);
+    for(uint8_t i=0; i<font->Height; ++i) {
+        const uint8_t *line=&font->Bitmap[*c_index_ptr + i*(font->Width>>3)];
 
-        for(int8_t j=0; j<font[0]; ++j, line>>=1) {
-            if(line & 1 ==1)
+        for(int8_t j=0; j<font->Width; j++) {
+            if(line[j>>3] & 1<<(7-(j&0x7u))) {
                 ssd1306_draw_square(p, x+i*scale, y+j*scale, scale, scale);
+            }
         }
     }
 }
 
-void ssd1306_draw_string_with_font(ssd1306_t *p, uint32_t x, uint32_t y, uint32_t scale, const uint8_t *font, char *s) {
-    for(int32_t x_n=x; *s; x_n+=font[0]*scale) {
+void ssd1306_draw_string_with_font(ssd1306_t *p, uint32_t x, uint32_t y, uint32_t scale, const struct bitmap_font *font, char *s) {
+    for(int32_t x_n=x; *s; x_n+=font->Width) {
         ssd1306_draw_char_with_font(p, x_n, y, scale, font, *(s++));
     }
-}
-
-void ssd1306_draw_char(ssd1306_t *p, uint32_t x, uint32_t y, uint32_t scale, char c) {
-    ssd1306_draw_char_with_font(p, x, y, scale, font_8x5, c);
-}
-
-void ssd1306_draw_string(ssd1306_t *p, uint32_t x, uint32_t y, uint32_t scale, char *s) {
-    ssd1306_draw_string_with_font(p, x, y, scale, font_8x5, s);
 }
 
 static inline uint32_t ssd1306_bmp_get_val(const uint8_t *data, const size_t offset, uint8_t size) {

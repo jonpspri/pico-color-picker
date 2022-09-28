@@ -18,18 +18,18 @@
 
 # --------------------------------------------------------------------------------
 
-#
-#  The linker is pretty good at weeding out dead modules,
-#  so I'm not sweating including all the code in this
-#  list.
-#
 add_executable(pico_color_picker
   main.c
+  context.c
   ws281x.c
   ssd1306.c
-  pico_ft2.c
+  #pico_ft2.c
   io_devices.c
-  log.c/src/log.c
+  logger/src/log.c
+  #fonts/5thElement.c
+  fonts/bitocra7.c
+  #fonts/bitocra.c
+  fonts/ter-u24n.c
 )
 
 pico_generate_pio_header(pico_color_picker
@@ -84,8 +84,8 @@ target_compile_definitions(pico_color_picker PRIVATE
   )
 
 target_include_directories(pico_color_picker PUBLIC
-  ${CMAKE_SOURCE_DIR}/freetype/include
-  log.c/src
+  ${CMAKE_SOURCE_DIR}/config
+  logger/src
   )
 
 target_link_libraries(pico_color_picker PRIVATE
@@ -93,12 +93,11 @@ target_link_libraries(pico_color_picker PRIVATE
   FreeRTOS-Kernel-Heap1
   pico_stdlib
   pico_binary_info
+  pico_mem_ops
   pico_multicore
   pico_time
   hardware_i2c
   hardware_pio
-  freetype
-  ibm_plex_mono
   )
 
 pico_add_extra_outputs(pico_color_picker)

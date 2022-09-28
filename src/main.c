@@ -32,10 +32,10 @@
 
 #include "log.h"
 #include "ws281x.h"
-#include "pico_ft2.h"
 #include "ssd1306.h"
 #include "io_devices.h"
 
+extern struct bitmap_font ter_u24n;
 
 /*-----------------------------------------------------------*/
 
@@ -145,7 +145,7 @@ void task_rotary_encoders(void *parm) {
     xTaskNotifyIndexed(tasks.screen, 1, rgb_encoders_value(), eSetValueWithOverwrite);
     xTaskNotifyIndexed(tasks.leds, 1, rgb_encoders_value(), eSetValueWithOverwrite);
 
-    if (!xTaskNotifyWaitIndexed(1, 0u, ULONG_MAX, &bits, portMAX_DELAY)) continue;
+    if (!xTaskNotifyWaitIndexed(1, 0u, 0xFFFFFFFFu, &bits, portMAX_DELAY)) continue;
   }
 }
 
@@ -161,14 +161,14 @@ void task_buttons(void *parm) {
       }
       bbits>>=2;
     }
-    if (!xTaskNotifyWaitIndexed(1, 0u, ULONG_MAX, &bits, portMAX_DELAY)) continue;
+    if (!xTaskNotifyWaitIndexed(1, 0u, 0xFFFFFFFFu, &bits, portMAX_DELAY)) continue;
   }
 }
 
 void task_leds(void * parm) {
   uint32_t rgb;
   for( ;; ) {
-    if (!xTaskNotifyWaitIndexed( 1, 0u, ULONG_MAX, &rgb, portMAX_DELAY)) continue;
+    if (!xTaskNotifyWaitIndexed( 1, 0u, 0xFFFFFFFFu, &rgb, portMAX_DELAY)) continue;
     ws281x_sparkle_pixels(1, &rgb);
   }
 }
@@ -189,17 +189,13 @@ void task_screen(void *parm) {
   log_info("%s", "Display Initialized...");
 
   for( ;; ) {
-    if (!xTaskNotifyWaitIndexed( 1, 0u, ULONG_MAX, &rgb, portMAX_DELAY)) continue;
-
-    uint32_t pen_x, pen_y;
-    pico_ft2_set_initial_pen_from_top_left(0, 0, &pen_x, &pen_y);
+    if (!xTaskNotifyWaitIndexed( 1, 0u, 0xFFFFFFFFu, &rgb, portMAX_DELAY)) continue;
 
     sprintf(hex_color_value, "#%06lx", rgb);
 
     ssd1306_clear(&disp);
     for(int i=0; hex_color_value[i]; i++) {
-      pico_ft2_render_char(&pen_x, &pen_y, hex_color_value[i], &disp,
-          (pico_ft2_draw_function)ssd1306_draw_pixel);
+      ssd1306_draw_string_with_font(&disp, 0, 0, 1, &ter_u24n, hex_color_value);
     }
     ssd1306_show(&disp);
   }
@@ -215,10 +211,6 @@ int main() {
 #endif
   log_info("%s", "Initializing PIO...");
   ws281x_pio_init();
-
-  log_info("%s", "Initializing Plex...");
-  pico_ft2_init_otf();
-  pico_ft2_set_font_size(12);
 
   log_info("%s", "Initializing Rotary Encoders...");
   rgb_encoders_init();
@@ -239,8 +231,6 @@ int main() {
   gpio_set_function(SCREEN_SCL_PIN, GPIO_FUNC_I2C);
   gpio_pull_up(SCREEN_SDA_PIN);
   gpio_pull_up(SCREEN_SCL_PIN);
-
-  pico_ft2_set_font_size(12);
 
   /*
    * Start the three tasks

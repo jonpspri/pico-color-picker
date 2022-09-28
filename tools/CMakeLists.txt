@@ -18,23 +18,6 @@
 
 cmake_minimum_required(VERSION 3.13)
 
-#
-#  Include the PICO SDK (out of tree) and FreeRTOS kernal (submodule)
-#
-include(${CMAKE_SOURCE_DIR}/pico_sdk_import.cmake)
-include(${CMAKE_SOURCE_DIR}/pico_extras_import.cmake)
-set(FREERTOS_KERNEL_PATH ${CMAKE_SOURCE_DIR}/FreeRTOS-Kernel)
-include(${CMAKE_SOURCE_DIR}/FreeRTOS_Kernel_import.cmake)
-include(ExternalProject)
+project(tools C)
 
-project(pico_piano C CXX ASM)
-pico_sdk_init()
-
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-add_subdirectory(src)
-
-#  Some gdb customization to be used from within the build directory
-file(COPY .gdbinit DESTINATION .)
+add_executable(bdf2c bdf2c/bdf2c.c)
