@@ -1,5 +1,8 @@
 // (c) 2009, 2010 Lutz Sammer, License: AGPLv3
 
+#ifndef __FONT_H
+#define __FONT_H
+
 	/// bitmap font structure
 struct bitmap_font {
 	unsigned char Width;		///< max. character width
@@ -9,6 +12,21 @@ struct bitmap_font {
 	const unsigned short *Index;	///< encoding to character index
 	const unsigned char *Bitmap;	///< bitmap of all characters
 };
+typedef struct bitmap_font font_t;
+
+/*
+ * We are using a techique called X Macro to manage inclusion of fonts
+ * from the compile-time configuration.  The actual fonts in use are
+ * defined in the main src/CMakeLists.txt file.
+ *
+ * see https://en.wikipedia.org/wiki/X_Macro for details on X Macro.
+ */
+#define X(name) extern const struct bitmap_font name;
+PICKER_FONTS
+#undef X
+
+#define LAQUO 171
+#define RAQUO 187
 
 	/// @{ defines to have human readable font files
 #define ________ 0x00
@@ -268,3 +286,4 @@ struct bitmap_font {
 #define XXXXXXX_ 0xFE
 #define XXXXXXXX 0xFF
 	/// @}
+#endif

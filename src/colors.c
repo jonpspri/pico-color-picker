@@ -18,22 +18,25 @@
  * pico-color-picker. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef __ROTARY_ENCODER_H
-#define __ROTARY_ENCODER_H
-
 #include "pico/stdlib.h"
+#include "context.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+static struct {
+  char *note_name;
+  uint32_t color;
+} note_colors[] = {
+  { "C", 0xFF0000 },
+  { "C#/Db", 0xcc1100 },
+  { "D", 0xbb2200 },
+  { "D#/Eb", 0xcc5500 },
+  { "E", 0xffcc00 },
+  { "F", 0x33ff00 },
+  { "F#/Gb", 0x00cd71 },
+  { "G", 0x008AA1 },
+  { "G#/Ab", 0x2161b0 },
+  { "A", 0x2200ff },
+  { "A#/B#", 0x860e90 },
+  { "B", 0xB8154A }
+};
 
-void io_devices_register_encoder(uint8_t re_number, bool inverted);
-void io_devices_init_encoders(uint8_t pin, uint8_t sm);
-void io_devices_register_button(uint8_t button_number);
-void io_devices_init_buttons(uint8_t pin, uint8_t sm);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+static uint8_t cursor_position;

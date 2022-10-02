@@ -140,6 +140,10 @@ inline void ssd1306_clear(ssd1306_t *p) {
     memset(p->buffer, 0, p->bufsize);
 }
 
+void ssd1306_draw_pixel_callback(void *p, uint32_t x, uint32_t y) {
+    ssd1306_draw_pixel((ssd1306_t *)p, x, y);
+}
+
 void ssd1306_draw_pixel(ssd1306_t *p, uint32_t x, uint32_t y) {
     if(x>=p->width || y>=p->height) return;
 
@@ -188,18 +192,20 @@ static int compare_uint16_t (const void * a, const void * b)
 
 void ssd1306_draw_char_with_font(ssd1306_t *p, uint32_t x, uint32_t y, uint32_t scale, const struct bitmap_font *font, uint16_t c) {
     uint16_t *c_index_ptr = (uint16_t *)
-        bsearch(&c, font->Index, sizeof(uint16_t), sizeof(uint16_t), compare_uint16_t);
+        bsearch(&c, font->Index, font->Chars, sizeof(uint16_t), compare_uint16_t);
     if(!c_index_ptr) {
-        log_error("Character %d not found in font.");
+        log_error("Character %d not found in font.", c);
         return;
     }
+    uint16_t span = (font->Width-1)/8 + 1;
+    uint16_t bitmap_offset = (c_index_ptr - font->Index)*font->Height*span;
 
     for(uint8_t i=0; i<font->Height; ++i) {
-        const uint8_t *line=&font->Bitmap[*c_index_ptr + i*(font->Width>>3)];
+        const uint8_t *line=&font->Bitmap[bitmap_offset + i*span];
 
         for(int8_t j=0; j<font->Width; j++) {
             if(line[j>>3] & 1<<(7-(j&0x7u))) {
-                ssd1306_draw_square(p, x+i*scale, y+j*scale, scale, scale);
+                ssd1306_draw_square(p, x+j*scale, y+i*scale, scale, scale);
             }
         }
     }
@@ -207,7 +213,7 @@ void ssd1306_draw_char_with_font(ssd1306_t *p, uint32_t x, uint32_t y, uint32_t 
 
 void ssd1306_draw_string_with_font(ssd1306_t *p, uint32_t x, uint32_t y, uint32_t scale, const struct bitmap_font *font, char *s) {
     for(int32_t x_n=x; *s; x_n+=font->Width) {
-        ssd1306_draw_char_with_font(p, x_n, y, scale, font, *(s++));
+        ssd1306_draw_char_with_font(p, x_n, y, scale, font, (uint16_t)(*(s++)));
     }
 }
 

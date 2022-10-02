@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License along with
 # pico-color-picker. If not, see <https://www.gnu.org/licenses/>.
 
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.15)
 
 #
 #  Include the PICO SDK (out of tree) and FreeRTOS kernal (submodule)

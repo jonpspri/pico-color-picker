@@ -18,19 +18,55 @@
 
 # --------------------------------------------------------------------------------
 
+#
+#  Compile-time configuration of the fonts to be used.
+#
+set(SINGLE_LINE_TEXT_FONT spleen_12x24)
+set(TRIPLE_LINE_TEXT_FONT spleen_5x8)
+set(RE_LABEL_FONT spleen_5x8)
+set(BUTTON_LABEL_FONT Dina_r400_8)
+set(FONTS
+  ${SINGLE_LINE_TEXT_FONT}
+  ${TRIPLE_LINE_TEXT_FONT}
+  ${RE_LABEL_FONT}
+  ${BUTTON_LABEL_FONT})
+list(REMOVE_DUPLICATES FONTS)
+message(STATUS "Fonts: ${FONTS}")
+
+set(FONT_SOURCES "${FONTS}")
+list(TRANSFORM FONT_SOURCES PREPEND "fonts/")
+list(TRANSFORM FONT_SOURCES APPEND ".c")
+message(STATUS "Font sources: ${FONT_SOURCES}")
+
+set(FONT_XMACROS_LIST "${FONTS}")
+list(TRANSFORM FONT_XMACROS_LIST PREPEND "X(")
+list(TRANSFORM FONT_XMACROS_LIST APPEND ")")
+string(REPLACE ";" " " FONT_XMACROS "${FONT_XMACROS_LIST}")
+message(STATUS "Font X Macros: ${FONT_XMACROS}")
+
+set(FONT_DEFINES
+  PICKER_FONTS=${FONT_XMACROS}
+  SINGLE_LINE_TEXT_FONT=${SINGLE_LINE_TEXT_FONT}
+  TRIPLE_LINE_TEXT_FONT=${TRIPLE_LINE_TEXT_FONT}
+  RE_LABEL_FONT=${RE_LABEL_FONT}
+  BUTTON_LABEL_FONT=${BUTTON_LABEL_FONT})
+
+# --------------------------------------------------------------------------------
+
 add_executable(pico_color_picker
-  main.c
-  context.c
-  ws281x.c
-  ssd1306.c
-  #pico_ft2.c
+  bitmap.cpp
+  buttons.cpp
+  context.cpp
   io_devices.c
-  logger/src/log.c
-  #fonts/5thElement.c
-  fonts/bitocra7.c
-  #fonts/bitocra.c
-  fonts/ter-u24n.c
+  log.c
+  main.cpp
+  rgb_encoders.cpp
+  ssd1306.c
+  ws281x.c
+
+  ${FONT_SOURCES}
 )
+set_property(TARGET pico_color_picker PROPERTY C_STANDARD 11)
 
 pico_generate_pio_header(pico_color_picker
   ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
@@ -43,6 +79,8 @@ pico_enable_stdio_usb(pico_color_picker 1)
 pico_enable_stdio_uart(pico_color_picker 0)
 
 target_compile_definitions(pico_color_picker PRIVATE
+  ${FONT_DEFINES}
+
   PICO_WS2812_PIO=0
   PICO_WS2813B_PIO=0
   PICO_WS2812_SM=0
@@ -81,16 +119,14 @@ target_compile_definitions(pico_color_picker PRIVATE
 
   LOG_USE_COLOR
   LOG_LEVEL=LOG_DEBUG
+  PICO_DEBUG_MALLOC
   )
 
-target_include_directories(pico_color_picker PUBLIC
-  ${CMAKE_SOURCE_DIR}/config
-  logger/src
-  )
+target_include_directories(pico_color_picker PUBLIC ${CMAKE_SOURCE_DIR}/config)
 
 target_link_libraries(pico_color_picker PRIVATE
   FreeRTOS-Kernel
-  FreeRTOS-Kernel-Heap1
+  FreeRTOS-Kernel-Heap3
   pico_stdlib
   pico_binary_info
   pico_mem_ops

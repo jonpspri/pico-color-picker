@@ -17,17 +17,26 @@
  * You should have received a copy of the GNU General Public License along with
  * pico-color-picker. If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef __PICO_FT2_H
-#define __PICO_FT2_H
 
-#include <ft2build.h>
-#include <freetype/freetype.h>
+#ifndef __RGB_ENCODERS_H
+#define __RGB_ENCODERS_H
 
-typedef void (*pico_ft2_draw_function)(void *, uint32_t, uint32_t);
+#include "context.h"
 
-extern void pico_ft2_init_otf();
-extern void pico_ft2_set_font_size(FT_Long);
-extern void pico_ft2_render_char(uint32_t *, uint32_t *, FT_ULong, void *, pico_ft2_draw_function);
-extern void pico_ft2_set_initial_pen_from_top_left(uint32_t, uint32_t, uint32_t*, uint32_t*);
-extern uint32_t pico_ft2_line_height_px();
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct rgb_encoders_data rgb_encoders_data_t;
+
+extern uint32_t rgb_encoders_value(rgb_encoders_data_t *);
+extern void rgb_encoders_ui_callback(void *, v32_t);
+extern void rgb_encoders_re_callback(void *, v32_t);
+extern void rgb_encoders_context_enable(context_handle_t);
+extern context_handle_t rgb_encoders_context_init(uint32_t);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif

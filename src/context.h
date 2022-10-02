@@ -1,4 +1,5 @@
-/*
+/* vim: set ft=cpp:
+ *
  * SPDX-FileCopyrightText: 2022 Jonathan Springer
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -18,18 +19,19 @@
  * pico-color-picker. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "FreeRTOS.h"
-#include "log.h"
+#ifndef __CONTEXT_H
+#define __CONTEXT_H
 
-#include <string.h>
+#include "FreeRTOS.h"
+#include "task.h"
+#include "semphr.h"
+
 #include "pico/stdlib.h"
 
-#ifndef IO_HANDLER_COUNT
-#define IO_HANDLER_COUNT 4
-#endif
+#include "bitmap.h"
 
-#ifndef MAX_CONTEXT_COUNT
-#define MAX_CONTEXT_COUNT 4
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 /*------------------------------------------------------------------------------
@@ -52,20 +54,56 @@
  * be a context.
  */
 
-typedef struct context context_t;
-typedef void (*screen_handler_f)(void);
-typedef void (*io_handler_f)(context_t *context);
-
-struct context {
-  io_handler_f io_handlers[IO_HANDLER_COUNT];
+union v32 {
+#ifdef __cplusplus
+  v32(int32_t x) : s(x) { };
+  v32(uint32_t x) : u(x) { };
+#endif
+  int32_t s;
+  uint32_t u;
 };
 
-static context_t contexts[MAX_CONTEXT_COUNT];
-static int context_count;
+typedef union v32 v32_t;
 
-context_t *create_context(io_handler_f *io_handlers) {
-  if (context_count >= MAX_CONTEXT_COUNT) panic("Context count overflow.");
-  context_t *c = &contexts[context_count++];
-  memcpy(c->io_handlers, io_handlers, sizeof(io_handler_f)*IO_HANDLER_COUNT);
-  return c;
+typedef struct context_callback {
+  void (*callback)(void *, v32_t);
+  void *data;
+} context_callback_t;
+
+typedef struct context_callback_table {
+  context_callback_t button_handlers[8];
+  context_callback_t re_handlers[4];
+  context_callback_t ui_update;
+} context_callback_table_t;
+
+typedef struct context {
+  context_callback_table_t *callbacks;
+  size_t context_data_size;
+  void *context_data;
+} context_t;
+typedef void *context_handle_t;
+
+typedef void *context_screen_handle_t;
+
+typedef struct task_list {
+  TaskHandle_t rotary_encoders;
+  TaskHandle_t buttons;
+  TaskHandle_t screen;
+  TaskHandle_t leds;
+} task_list_t;
+
+extern task_list_t tasks;
+
+extern context_handle_t context_init(context_callback_table_t *callbacks, size_t context_data_size, void *context_data);
+extern context_screen_handle_t context_screen_init();
+extern void context_screen_set_re_label(context_screen_handle_t, uint8_t, const char *);
+extern void context_screen_set_button_char(context_screen_handle_t, uint8_t, uint16_t);
+
+extern void context_screen_task(void *parm);
+#ifdef __cplusplus
 }
+#endif
+
+extern Bitmap &context_screen_bitmap(context_screen_handle_t);
+
+#endif

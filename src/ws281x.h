@@ -18,13 +18,24 @@
  * pico-color-picker. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef _WS281X_H
-#define _WS281X_H
+#ifndef __WS281X_H
+#define __WS281X_H
+
+#include "pico/stdlib.h"
 
 #ifndef USE_WS2812
 #define USE_WS2812 0
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern void ws281x_sparkle_pixels(uint16_t rgb_count, uint32_t *rgbs);
 extern void ws281x_pio_init();
+
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* __WS281X_H */

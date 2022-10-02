@@ -34,6 +34,10 @@ SOFTWARE.
 #include <hardware/i2c.h>
 #include "fonts/font.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
 *   @brief defines commands used in ssd1306
 */
@@ -144,6 +148,7 @@ void ssd1306_clear(ssd1306_t *p);
     @param[in] y : y position
 */
 void ssd1306_draw_pixel(ssd1306_t *p, uint32_t x, uint32_t y);
+extern void ssd1306_draw_pixel_callback(void *p, uint32_t x, uint32_t y);
 
 /**
     @brief draw pixel on buffer
@@ -221,5 +226,9 @@ void ssd1306_draw_char_with_font(ssd1306_t *p, uint32_t x, uint32_t y, uint32_t 
     @param[in] s : text to draw
 */
 void ssd1306_draw_string_with_font(ssd1306_t *p, uint32_t x, uint32_t y, uint32_t scale, const struct bitmap_font *font, char *s );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
