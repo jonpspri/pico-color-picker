@@ -36,28 +36,28 @@ extern "C" {
 #endif
 
 
-struct bitmap_buffer;
-typedef struct bitmap_buffer bitmap_buffer_t;
-struct bitmap_buffer {
-  void (*draw_pixel)(bitmap_buffer_t *, uint32_t x, uint32_t y, bool value);
-  bool (*pixel_value)(bitmap_buffer_t *, uint32_t x, uint32_t y);
-  void (*clear)(bitmap_buffer_t *);
-  void (*free_buffer)(bitmap_buffer_t *);
-  void *d;
-};
-
-typedef struct bitmap {
+struct bitmap;
+typedef struct bitmap bitmap_t;
+struct bitmap {
   uint32_t width;
   uint32_t height;
   uint32_t words_per_line;
   bool inverted;
-  uint32_t *buffer;
-} bitmap_t;
+
+  void (*draw_pixel)(bitmap_t *, uint32_t x, uint32_t y, bool value);
+  bool (*pixel_value)(bitmap_t *, uint32_t x, uint32_t y);
+  void (*clear)(bitmap_t *);
+  void (*free_buffer)(bitmap_t *);
+
+  void *buffer;
+};
 
 bitmap_t *bitmap_init(uint32_t width, uint32_t height);
 
 void bitmap_clear(bitmap_t *);
 void bitmap_draw_pixel(bitmap_t *, uint32_t x, uint32_t y, bool value);
+bool bitmap_pixel_value(bitmap_t *, uint32_t x, uint32_t y);
+
 void bitmap_draw_char(bitmap_t *, uint32_t x, uint32_t y, const struct bitmap_font *font, uint16_t c);
 void bitmap_draw_string(bitmap_t *, uint32_t x, uint32_t y, const struct bitmap_font *font, const char *);
 void bitmap_invert(bitmap_t *);

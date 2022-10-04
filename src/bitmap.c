@@ -28,6 +28,8 @@
 
 #include "fonts/font.h"
 
+/* ---------------------------------------------------------------------- */
+
 static int compare_uint16_t (const void * a, const void * b) {
   return ( *(uint16_t *)a - *(uint16_t*)b );
 }
@@ -36,13 +38,47 @@ static void draw_pixel_callback(void *bitmap, uint32_t x, uint32_t y, bool value
   bitmap_draw_pixel((bitmap_t *)bitmap, x, y, value);
 }
 
+/* ---------------------------------------------------------------------- */
+
+#define WORDS(_x) (((_x)-1)/32+1)
+
+static void w_draw_pixel(bitmap_t *b, uint32_t x, uint32_t y, bool value) {
+  if (x > b->width || y > b->height) {
+    log_error("Drawing point (%d, %d) out of bound for bitmap (%d, %d)", x, y, b->width, b->height);
+    return;
+  }
+  uint32_t *w = &(((uint32_t *)b->buffer)[y * WORDS(b->width) + (x>>5)]);
+  if (value) { *w |=  1<<(31-(x & 31u)); }
+  else { *w &= ~(1<<(31-(x & 31u))); }
+}
+
+static bool w_pixel_value(bitmap_t *b, uint32_t x, uint32_t y) {
+  bool pixel = ((uint32_t*)b->buffer)[y * WORDS(b->width) + (x>>5)] & 1<<(31-(x&31u));
+  return ( b->inverted != pixel );  /*  Essentially an XOR  */
+}
+
+static void w_clear(bitmap_t *b) {
+  memset(b->buffer, 0, b->height * WORDS(b->width) * 4);
+}
+
+static void w_free_buffer(bitmap_t *b) {
+  vPortFree(b->buffer);
+}
+
+/* ---------------------------------------------------------------------- */
+
 bitmap_t *bitmap_init(uint32_t width, uint32_t height) {
   bitmap_t *b= pvPortMalloc(sizeof(bitmap_t));
   b->width = width;
   b->height = height;
-  b->words_per_line = (width-1)/32+1;
   b->inverted = false;
-  uint32_t b_size = height * b->words_per_line * 4;
+
+  b->draw_pixel = w_draw_pixel;
+  b->pixel_value = w_pixel_value;
+  b->clear = w_clear;
+  b->free_buffer = w_free_buffer;
+
+  uint32_t b_size = height * WORDS(width) * 4;
   b->buffer = memset(pvPortMalloc(b_size),0,b_size);
   return b;
 }
@@ -53,50 +89,15 @@ void bitmap_free(bitmap_t *bitmap) {
 }
 
 void bitmap_clear(bitmap_t *b) {
-  memset(b->buffer, 0, b->height*b->words_per_line*4);
+  b->clear(b);
 }
 
 void bitmap_draw_pixel(bitmap_t *b, uint32_t x, uint32_t y, bool value) {
-  if (x > b->width || y > b->height) {
-    log_error("Drawing point (%d, %d) out of bound for bitmap (%d, %d)", x, y, b->width, b->height);
-    return;
-  }
-  if (value) {
-    b->buffer[y*b->words_per_line + (x>>5)] |= 1<<(31-(x & 31u));
-  } else {
-    b->buffer[y*b->words_per_line + (x>>5)] &= ~(1<<(31-(x & 31u)));
-  }
+  b->draw_pixel(b, x, y, value);
 }
 
 bool bitmap_pixel_value(bitmap_t *b, uint32_t x, uint32_t y) {
-  bool pixel = b->buffer[y*b->words_per_line + (x>>5)] & 1<<(31-(x&31u));
-  return ( b->inverted != pixel );  /*  Essentially an XOR  */
-}
-
-void bitmap_draw_char(bitmap_t *b, uint32_t x, uint32_t y, const struct bitmap_font *font, uint16_t c) {
-  uint16_t *c_index_ptr = (uint16_t *)
-    bsearch(&c, font->Index, font->Chars, sizeof(uint16_t), compare_uint16_t);
-  if(!c_index_ptr) {
-    log_error("Character %d not found in font.", c);
-  }
-  uint16_t span = (font->Width-1)/8 + 1;
-  uint16_t bitmap_offset = (c_index_ptr - font->Index)*font->Height*span;
-
-  for(uint32_t i=0; i<font->Height; i++) {
-    const uint8_t *line=&font->Bitmap[bitmap_offset + i*span];
-
-    for(int32_t j=0; j<font->Width; j++)  {
-      if(line[j>>3] & 1<<(7-(j&7u))) {
-        bitmap_draw_pixel(b, x+j, y+i, true);
-      }
-    }
-  }
-}
-
-void bitmap_draw_string(bitmap_t *b, uint32_t x, uint32_t y, const struct bitmap_font *font, const char *string) {
-  for(int i=0; i<strlen(string); i++) {
-    bitmap_draw_char(b, x+i*font->Width, y, font, string[i]);
-  }
+  return b->pixel_value(b, x, y);
 }
 
 /*
@@ -153,3 +154,29 @@ void bitmap_draw_5x5_checkbox(bitmap_t *b, uint32_t x, uint32_t y, bool checked)
   }
 }
 #endif
+
+void bitmap_draw_char(bitmap_t *b, uint32_t x, uint32_t y, const struct bitmap_font *font, uint16_t c) {
+  uint16_t *c_index_ptr = (uint16_t *)
+    bsearch(&c, font->Index, font->Chars, sizeof(uint16_t), compare_uint16_t);
+  if(!c_index_ptr) {
+    log_error("Character %d not found in font.", c);
+  }
+  uint16_t span = (font->Width-1)/8 + 1;
+  uint16_t bitmap_offset = (c_index_ptr - font->Index)*font->Height*span;
+
+  for(uint32_t i=0; i<font->Height; i++) {
+    const uint8_t *line=&font->Bitmap[bitmap_offset + i*span];
+
+    for(int32_t j=0; j<font->Width; j++)  {
+      if(line[j>>3] & 1<<(7-(j&7u))) {
+        bitmap_draw_pixel(b, x+j, y+i, true);
+      }
+    }
+  }
+}
+
+void bitmap_draw_string(bitmap_t *b, uint32_t x, uint32_t y, const struct bitmap_font *font, const char *string) {
+  for(int i=0; i<strlen(string); i++) {
+    bitmap_draw_char(b, x+i*font->Width, y, font, string[i]);
+  }
+}
