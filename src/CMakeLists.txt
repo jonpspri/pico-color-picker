@@ -159,7 +159,7 @@ target_include_directories(pico_color_picker PUBLIC ${CMAKE_SOURCE_DIR}/config)
 
 target_link_libraries(pico_color_picker PRIVATE
   FreeRTOS-Kernel
-  FreeRTOS-Kernel-Heap1
+  FreeRTOS-Kernel-Heap3
   pico_stdlib
   pico_binary_info
   pico_mem_ops

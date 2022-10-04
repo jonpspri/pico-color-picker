@@ -31,7 +31,7 @@
 /* ---------------------------------------------------------------------- */
 
 context_t *context_init(context_callback_table_t *callbacks, size_t context_data_size, void *context_data) {
-  context_t* context = (context_t *)malloc(sizeof(context_t));
+  context_t* context = (context_t *)pvPortMalloc((sizeof(context_t)));
   context->context_data_size = context_data_size;
   context->context_data = context_data;
   return (context_t *)context;

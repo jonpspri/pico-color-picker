@@ -27,7 +27,6 @@
 #include "semphr.h"
 
 /* pico-color-piano includes */
-/*#include "bitmap.h"*/
 #include "buttons.h"
 #include "context.h"
 #include "io_devices.h"
@@ -45,6 +44,7 @@ typedef struct rgb_encoder {
 } rgb_encoder_t;
 
 #define RGB_ENCODERS_COUNT 4
+
 struct rgb_encoders_data {
   SemaphoreHandle_t rgb_encoder_mutex;
   rgb_encoder_t rgb_encoders[4];  /*  We waste storage to simplify lookup.  Maybe not necessary with callbacks?  */
