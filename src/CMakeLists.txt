@@ -90,6 +90,7 @@ add_executable(pico_color_picker
   bitmap.c
   bitmap_ssd1306.c
   buttons.c
+  colors.c
   context.c
   io_devices.c
   log.c
@@ -159,7 +160,7 @@ target_include_directories(pico_color_picker PUBLIC ${CMAKE_SOURCE_DIR}/config)
 
 target_link_libraries(pico_color_picker PRIVATE
   FreeRTOS-Kernel
-  FreeRTOS-Kernel-Heap3
+  FreeRTOS-Kernel-Heap4
   pico_stdlib
   pico_binary_info
   pico_mem_ops

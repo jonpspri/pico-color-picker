@@ -83,7 +83,7 @@ void context_screen_task(void *parm) {
     if (!xTaskNotifyWaitIndexed( 1, 0u, 0xFFFFFFFFu, (uint32_t *)(& cs), portMAX_DELAY)) continue;
 
     xSemaphoreTake(cs->mutex, portMAX_DELAY);
-    bitmap_copy_from(screen_buffer, cs->pane);
+    bitmap_copy_from(screen_buffer, cs->pane, 0, 0);
     bitmap_draw_string(screen_buffer, 0, RE_LABEL_Y_OFFSET, &TRIPLE_LINE_TEXT_FONT, cs->re_labels[0]);
     bitmap_draw_string(screen_buffer,
         (RE_LABEL_TOTAL_WIDTH - TRIPLE_LINE_TEXT_FONT.Width*strnlen(cs->re_labels[1],8))/2,

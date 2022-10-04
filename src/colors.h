@@ -18,8 +18,8 @@
  * pico-color-picker. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef __MENU_CONTEXT_H
-#define __MENU_CONTEXT_H
+#ifndef __COLORS_H
+#define __COLORS_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,20 +32,12 @@ typedef void format_data(char *buffer, uint8_t buffer_size, void *data);
 typedef struct menu_item {
   bool has_checkbox;
   bool checked;
-  context_handle_t enter_context;   /* TODO: Flesh out what I need to do this */
-  bitmap_handle_t bitmap;
-  size_t data_size;
-  void *data;
+  context_t *enter_context;   /* TODO: Flesh out what I need to do this */
 } menu_item_t;
 
-typedef struct menu_context_data {
-  uint32_t cursor_location;
-  uint32_t menu_items_max;
-  menu_item_t *menu_items;
-} menu_context_data_t;
 
-extern void menu_context_enable(context_handle_t *menu_context);
-extern context_handle_t *menu_context_init(menu_item_t *menu_items, uint32_t menu_items_max);
+extern void colors_context_enable(context_t *menu_context);
+extern context_t *colors_context_init();
 
 #ifdef __cplusplus
 }

@@ -41,23 +41,14 @@ void button_register_generic_callbacks(context_callback_table_t *callbacks) {
   /*
    * TODO - Should the io_devices registration really be here?
    */
-  io_devices_register_button(BUTTON_UPPER_OFFSET);
   callbacks->button_handlers[BUTTON_UPPER_OFFSET].callback=process_button;
   callbacks->button_handlers[BUTTON_UPPER_OFFSET].data=&button_depressed[BUTTON_UPPER_OFFSET];
-
-  io_devices_register_button(BUTTON_LOWER_OFFSET);
   callbacks->button_handlers[BUTTON_LOWER_OFFSET].callback=process_button;
   callbacks->button_handlers[BUTTON_LOWER_OFFSET].data=&button_depressed[BUTTON_LOWER_OFFSET];
-
-  io_devices_register_button(BUTTON_RED_OFFSET);
   callbacks->button_handlers[BUTTON_RED_OFFSET].callback=process_button;
   callbacks->button_handlers[BUTTON_RED_OFFSET].data=&button_depressed[BUTTON_RED_OFFSET];
-
-  io_devices_register_button(BUTTON_GREEN_OFFSET);
   callbacks->button_handlers[BUTTON_GREEN_OFFSET].callback=process_button;
   callbacks->button_handlers[BUTTON_GREEN_OFFSET].data=&button_depressed[BUTTON_GREEN_OFFSET];
-
-  io_devices_register_button(BUTTON_BLUE_OFFSET);
   callbacks->button_handlers[BUTTON_BLUE_OFFSET].callback=process_button;
   callbacks->button_handlers[BUTTON_BLUE_OFFSET].data=&button_depressed[BUTTON_BLUE_OFFSET];
 }

@@ -53,15 +53,17 @@ struct bitmap {
 
 bitmap_t *bitmap_init(uint32_t width, uint32_t height, void (*custom_init)(bitmap_t *));
 
-void bitmap_clear(bitmap_t *);
-void bitmap_draw_pixel(bitmap_t *, uint32_t x, uint32_t y, bool value);
-bool bitmap_pixel_value(bitmap_t *, uint32_t x, uint32_t y);
-
 void bitmap_draw_char(bitmap_t *, uint32_t x, uint32_t y, const struct bitmap_font *font, uint16_t c);
+void bitmap_draw_empty_square(bitmap_t *, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
+void bitmap_draw_square(bitmap_t *, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
 void bitmap_draw_string(bitmap_t *, uint32_t x, uint32_t y, const struct bitmap_font *font, const char *);
-void bitmap_invert(bitmap_t *);
-void bitmap_copy_from(bitmap_t *, bitmap_t *);  // Temporary ?
-void bitmap_rerender(bitmap_t *, uint32_t x_max, uint32_t y_max, void (* callback)(void *, uint32_t, uint32_t, bool), void *target);
+
+void bitmap_copy_from(bitmap_t *, bitmap_t *, uint32_t x, uint32_t y);
+
+static inline void bitmap_invert(bitmap_t *b) { b->inverted = !b->inverted; }
+static inline void bitmap_clear(bitmap_t *b) { b->inverted = false; b->clear(b); }
+static inline void bitmap_draw_pixel(bitmap_t *b, uint32_t x, uint32_t y, bool value) { b->draw_pixel(b, x, y, value); }
+static inline bool bitmap_pixel_value(bitmap_t *b, uint32_t x, uint32_t y) { return b->pixel_value(b, x, y); }
 
 #ifdef __cplusplus
 }

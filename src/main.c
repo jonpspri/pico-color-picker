@@ -36,6 +36,7 @@
 
 /* pico-color-picker includes */
 #include "context.h"
+#include "colors.h"
 #include "io_devices.h"
 #include "log.h"
 #include "rgb_encoders.h"
@@ -67,10 +68,9 @@ void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName )
 task_list_t tasks;
 
 void task_rotary_encoders(void *parm) {
-  /*
-   * Initialization happens within the task because the notification task ID
-   * can be easily detected.
-   */
+  io_devices_register_encoder(ROTARY_ENCODER_RED_OFFSET, ROTARY_ENCODER_RED_INVERTED);
+  io_devices_register_encoder(ROTARY_ENCODER_GREEN_OFFSET, ROTARY_ENCODER_GREEN_INVERTED);
+  io_devices_register_encoder(ROTARY_ENCODER_BLUE_OFFSET, ROTARY_ENCODER_BLUE_INVERTED);
   io_devices_init_encoders(ROTARY_ENCODER_LOW_PIN, ROTARY_ENCODER_SM);
 
   uint32_t bits = 0u;
@@ -96,6 +96,11 @@ void task_rotary_encoders(void *parm) {
 }
 
 void task_buttons(void *parm) {
+  io_devices_register_button(BUTTON_UPPER_OFFSET);
+  io_devices_register_button(BUTTON_LOWER_OFFSET);
+  io_devices_register_button(BUTTON_RED_OFFSET);
+  io_devices_register_button(BUTTON_GREEN_OFFSET);
+  io_devices_register_button(BUTTON_BLUE_OFFSET);
   io_devices_init_buttons(BUTTON_LOW_PIN, BUTTON_SM);
 
   uint32_t bits = 0u;
@@ -109,6 +114,8 @@ void task_buttons(void *parm) {
       if(!c->callback || !(bits & 1u)) continue;
       c->callback(c->data, (v32_t)(bits & 2u));
     }
+
+    if (callbacks->ui_update.callback) callbacks->ui_update.callback(callbacks->ui_update.data, (v32_t)0ul);
 
     if (!xTaskNotifyWaitIndexed(1, 0u, 0xFFFFFFFFu, &bits, portMAX_DELAY)) continue;
   }
@@ -134,11 +141,6 @@ int main() {
 #endif
   log_info("%s", "Initializing PIO...");
   ws281x_pio_init();
-
-  log_info("%s", "Initializing Rotary Encoders (IO)...");
-  io_devices_register_encoder(ROTARY_ENCODER_RED_OFFSET, ROTARY_ENCODER_RED_INVERTED);
-  io_devices_register_encoder(ROTARY_ENCODER_GREEN_OFFSET, ROTARY_ENCODER_GREEN_INVERTED);
-  io_devices_register_encoder(ROTARY_ENCODER_BLUE_OFFSET, ROTARY_ENCODER_BLUE_INVERTED);
 
   log_info("%s", "Initializing I2C...");
   i2c_init(SCREEN_I2C, 400000);
@@ -166,7 +168,8 @@ int main() {
   xTaskCreate(task_leds, "LEDs Task",
       configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, &tasks.leds);
 
-  rgb_encoders_context_enable( rgb_encoders_context_init(0) );
+  /* rgb_encoders_context_enable( rgb_encoders_context_init(0) ); */
+  colors_context_enable( colors_context_init() );
 
   vTaskStartScheduler();
 
