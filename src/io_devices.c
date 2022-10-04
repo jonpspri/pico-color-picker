@@ -42,6 +42,8 @@
  * THE SOFTWARE.
  */
 
+#include <string.h>
+
 #include "FreeRTOS.h"
 #include "task.h"
 
@@ -244,7 +246,8 @@ static void init_pin(uint8_t pin) {
 void io_devices_register_encoder( uint8_t re_number, bool inverted) {
   rotary_encoders[re_number].inverted = inverted;
   rotary_encoders[re_number].enabled = true;
-  rotary_encoders[re_number].transition_history = calloc(sizeof(transition_history_t), 256);
+  rotary_encoders[re_number].transition_history =
+    memset(pvPortMalloc(sizeof(transition_history_t)*256),0,sizeof(transition_history_t)*256);
 }
 
 void io_devices_register_button( uint8_t button_number) {

@@ -65,25 +65,25 @@ uint32_t rgb_encoders_value(rgb_encoders_data_t *re) {
 }
 
 void rgb_encoders_ui_callback(void *data, v32_t v) {
-  static context_screen_handle_t sc;
+  static context_screen_t *cs;
   static char hex_color_value[8];
-  if (!sc) {
-    sc = context_screen_init();
-    context_screen_set_re_label(sc, 0, "Red");
-    context_screen_set_re_label(sc, 1, "Green");
-    context_screen_set_re_label(sc, 2, "Blue");
-    context_screen_set_button_char(sc, 0, LAQUO);
-    context_screen_set_button_char(sc, 1, RAQUO);
+
+  if (!cs) {
+    cs = context_screen_init();
+    context_screen_set_re_label(cs, 0, "Red");
+    context_screen_set_re_label(cs, 1, "Green");
+    context_screen_set_re_label(cs, 2, "Blue");
+    context_screen_set_button_char(cs, 0, LAQUO);
+    context_screen_set_button_char(cs, 1, RAQUO);
   }
 
   uint32_t rgb = rgb_encoders_value((rgb_encoders_data_t *)data);
   sprintf(hex_color_value, "#%06lx", rgb);
 
-  Bitmap &bitmap=context_screen_bitmap(sc);
-  bitmap.clear();
-  bitmap.draw_string(0, 0, &SINGLE_LINE_TEXT_FONT, hex_color_value);
+  bitmap_clear(cs->pane);
+  bitmap_draw_string(cs->pane, 0, 0, &SINGLE_LINE_TEXT_FONT, hex_color_value);
 
-  xTaskNotifyIndexed(tasks.screen, 1, (uint32_t)sc, eSetValueWithOverwrite);
+  xTaskNotifyIndexed(tasks.screen, 1, (uint32_t)cs, eSetValueWithOverwrite);
   xTaskNotifyIndexed(tasks.leds, 1, rgb, eSetValueWithOverwrite);
 }
 
@@ -97,14 +97,14 @@ void rgb_encoders_re_callback(void *re_v, v32_t delta) {
   re->value = value;
 };
 
-void rgb_encoders_context_enable(context_handle_t context) {
+void rgb_encoders_context_enable(context_t *context) {
   if(tasks.rotary_encoders)
     xTaskNotifyIndexed(tasks.rotary_encoders, 2, (uint32_t)&rgb_callbacks, eSetValueWithOverwrite);
   if(tasks.buttons)
     xTaskNotifyIndexed(tasks.buttons, 2, (uint32_t)&rgb_callbacks, eSetValueWithOverwrite);
 }
 
-context_handle_t rgb_encoders_context_init(uint32_t rgb) {
+context_t *rgb_encoders_context_init(uint32_t rgb) {
   rgb_encoders.rgb_encoder_mutex=xSemaphoreCreateMutex();
 
   rgb_encoders.rgb_encoders[ROTARY_ENCODER_RED_OFFSET].active = true;

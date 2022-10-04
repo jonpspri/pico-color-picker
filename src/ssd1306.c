@@ -23,6 +23,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+#include "FreeRTOS.h"
+
 #include <pico/stdlib.h>
 #include <hardware/i2c.h>
 #include <pico/binary_info.h>
@@ -33,8 +35,8 @@ SOFTWARE.
 #include "ssd1306.h"
 #include "log.h"
 
-inline static void swap(uint32_t *a, uint32_t *b) {
-    uint32_t *t=a;
+inline static void swap(int32_t *a, int32_t *b) {
+    int32_t *t=a;
     *a=*b;
     *b=*t;
 }
@@ -68,7 +70,7 @@ bool ssd1306_init(ssd1306_t *p, uint16_t width, uint16_t height, uint8_t address
 
 
     p->bufsize=(p->pages)*(p->width);
-    if((p->buffer=malloc(p->bufsize+1))==NULL) {
+    if((p->buffer=pvPortMalloc(p->bufsize+1))==NULL) {
         p->bufsize=0;
         return false;
     }
@@ -140,7 +142,7 @@ inline void ssd1306_clear(ssd1306_t *p) {
     memset(p->buffer, 0, p->bufsize);
 }
 
-void ssd1306_draw_pixel_callback(void *p, uint32_t x, uint32_t y) {
+void ssd1306_draw_pixel_callback(void *p, uint32_t x, uint32_t y, bool value) {
     ssd1306_draw_pixel((ssd1306_t *)p, x, y);
 }
 

@@ -29,44 +29,40 @@
 
 #include "FreeRTOS.h"
 #include "semphr.h"
+#include "ssd1306.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-class Bitmap {
-  private:
-    // TODO:  Move a lot of this into the "Pixel" interface
-    const uint32_t words_per_line;
-    uint32_t *buffer;
-    bool inverted;
-    static int compare_uint16_t (const void * a, const void * b) {
-      return ( *(uint16_t *)a - *(uint16_t*)b );
-    }
-    // TODO:  Create a "drawable" interface to rework this.
-    static void bitmap_draw_pixel_callback(void *bitmap, uint32_t x, uint32_t y) {
-      static_cast<Bitmap *>(bitmap)->draw_pixel(x, y, true);
-    }
-  public:
-    const uint32_t width;
-    const uint32_t height;
-
-    Bitmap(uint32_t, uint32_t);
-    ~Bitmap();
-
-    void clear();
-    void draw_pixel(uint32_t, uint32_t, bool);
-    bool pixel_value(uint32_t, uint32_t);
-    void draw_char(uint32_t, uint32_t, const struct bitmap_font *font, uint16_t);
-    void draw_string(uint32_t, uint32_t, const struct bitmap_font *font, char *);
-    void rotate_ccw(Bitmap &, uint32_t, uint32_t);
-    void invert();
-    // TODO:  Rework to be more interface-y (or a copy?)
-    void rerender(uint32_t x_max, uint32_t y_max, void (* callback)(void *, uint32_t, uint32_t), void *target);
-
-    void copy_from(Bitmap &source);
+struct bitmap_buffer;
+typedef struct bitmap_buffer bitmap_buffer_t;
+struct bitmap_buffer {
+  void (*draw_pixel)(bitmap_buffer_t *, uint32_t x, uint32_t y, bool value);
+  bool (*pixel_value)(bitmap_buffer_t *, uint32_t x, uint32_t y);
+  void (*clear)(bitmap_buffer_t *);
+  void (*free_buffer)(bitmap_buffer_t *);
+  void *d;
 };
+
+typedef struct bitmap {
+  uint32_t width;
+  uint32_t height;
+  uint32_t words_per_line;
+  bool inverted;
+  uint32_t *buffer;
+} bitmap_t;
+
+bitmap_t *bitmap_init(uint32_t width, uint32_t height);
+
+void bitmap_clear(bitmap_t *);
+void bitmap_draw_pixel(bitmap_t *, uint32_t x, uint32_t y, bool value);
+void bitmap_draw_char(bitmap_t *, uint32_t x, uint32_t y, const struct bitmap_font *font, uint16_t c);
+void bitmap_draw_string(bitmap_t *, uint32_t x, uint32_t y, const struct bitmap_font *font, const char *);
+void bitmap_invert(bitmap_t *);
+void bitmap_copy_from(bitmap_t *, bitmap_t *);  // Temporary ?
+void bitmap_rerender(bitmap_t *, uint32_t x_max, uint32_t y_max, void (* callback)(void *, uint32_t, uint32_t, bool), void *target);
 
 #ifdef __cplusplus
 }

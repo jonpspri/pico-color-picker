@@ -81,9 +81,13 @@ typedef struct context {
   size_t context_data_size;
   void *context_data;
 } context_t;
-typedef void *context_handle_t;
 
-typedef void *context_screen_handle_t;
+typedef struct context_screen {
+  SemaphoreHandle_t mutex;
+  bitmap_t *pane;
+  char re_labels[3][9];
+  uint16_t button_chars[2];
+} context_screen_t;
 
 typedef struct task_list {
   TaskHandle_t rotary_encoders;
@@ -94,16 +98,15 @@ typedef struct task_list {
 
 extern task_list_t tasks;
 
-extern context_handle_t context_init(context_callback_table_t *callbacks, size_t context_data_size, void *context_data);
-extern context_screen_handle_t context_screen_init();
-extern void context_screen_set_re_label(context_screen_handle_t, uint8_t, const char *);
-extern void context_screen_set_button_char(context_screen_handle_t, uint8_t, uint16_t);
+extern context_t *context_init(context_callback_table_t *callbacks, size_t context_data_size, void *context_data);
+
+extern context_screen_t *context_screen_init();
+extern void context_screen_set_re_label(context_screen_t *, uint8_t, const char *);
+extern void context_screen_set_button_char(context_screen_t *, uint8_t, uint16_t);
 
 extern void context_screen_task(void *parm);
 #ifdef __cplusplus
 }
 #endif
-
-extern Bitmap &context_screen_bitmap(context_screen_handle_t);
 
 #endif

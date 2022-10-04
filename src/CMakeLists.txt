@@ -54,19 +54,18 @@ set(FONT_DEFINES
 # --------------------------------------------------------------------------------
 
 add_executable(pico_color_picker
-  bitmap.cpp
-  buttons.cpp
-  context.cpp
+  bitmap.c
+  buttons.c
+  context.c
   io_devices.c
   log.c
-  main.cpp
-  rgb_encoders.cpp
+  main.c
+  rgb_encoders.c
   ssd1306.c
   ws281x.c
 
   ${FONT_SOURCES}
 )
-set_property(TARGET pico_color_picker PROPERTY C_STANDARD 11)
 
 pico_generate_pio_header(pico_color_picker
   ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
@@ -126,7 +125,7 @@ target_include_directories(pico_color_picker PUBLIC ${CMAKE_SOURCE_DIR}/config)
 
 target_link_libraries(pico_color_picker PRIVATE
   FreeRTOS-Kernel
-  FreeRTOS-Kernel-Heap3
+  FreeRTOS-Kernel-Heap1
   pico_stdlib
   pico_binary_info
   pico_mem_ops
