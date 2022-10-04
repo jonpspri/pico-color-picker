@@ -142,14 +142,18 @@ inline void ssd1306_clear(ssd1306_t *p) {
     memset(p->buffer, 0, p->bufsize);
 }
 
-void ssd1306_draw_pixel_callback(void *p, uint32_t x, uint32_t y, bool value) {
-    ssd1306_draw_pixel((ssd1306_t *)p, x, y);
-}
-
-void ssd1306_draw_pixel(ssd1306_t *p, uint32_t x, uint32_t y) {
+void ssd1306_draw_pixel(ssd1306_t *p, uint32_t x, uint32_t y, bool value) {
     if(x>=p->width || y>=p->height) return;
 
-    p->buffer[x+p->width*(y>>3)]|=0x1<<(y&0x07); // y>>3==y/8 && y&0x7==y%8
+    if(value) {
+        p->buffer[x+p->width*(y>>3)]|=0x1<<(y&0x07); // y>>3==y/8 && y&0x7==y%8
+    } else {
+        p->buffer[x+p->width*(y>>3)]&=~(0x1<<(y&0x07)); // y>>3==y/8 && y&0x7==y%8
+    }
+}
+
+bool ssd1306_pixel_value(ssd1306_t *p, uint32_t x, uint32_t y) {
+    return (bool)(p->buffer[x+p->width*(y>>3)] & (0x1<<(y&0x07)));
 }
 
 void ssd1306_draw_line(ssd1306_t *p, int32_t x1, int32_t y1, int32_t x2, int32_t y2) {
@@ -162,7 +166,7 @@ void ssd1306_draw_line(ssd1306_t *p, int32_t x1, int32_t y1, int32_t x2, int32_t
         if(y1>y2)
             swap(&y1, &y2);
         for(int32_t i=y1; i<=y2; ++i)
-            ssd1306_draw_pixel(p, x1, i);
+            ssd1306_draw_pixel(p, x1, i, true);
         return;
     }
 
@@ -170,14 +174,14 @@ void ssd1306_draw_line(ssd1306_t *p, int32_t x1, int32_t y1, int32_t x2, int32_t
 
     for(int32_t i=x1; i<=x2; ++i) {
         float y=m*(float) (i-x1)+(float) y1;
-        ssd1306_draw_pixel(p, i, (uint32_t) y);
+        ssd1306_draw_pixel(p, i, (uint32_t) y, true);
     }
 }
 
 void ssd1306_draw_square(ssd1306_t *p, uint32_t x, uint32_t y, uint32_t width, uint32_t height) {
     for(uint32_t i=0; i<width; ++i)
         for(uint32_t j=0; j<height; ++j)
-            ssd1306_draw_pixel(p, x+i, y+j);
+            ssd1306_draw_pixel(p, x+i, y+j, true);
 
 }
 
@@ -271,7 +275,7 @@ void ssd1306_bmp_show_image_with_offset(ssd1306_t *p, const uint8_t *data, const
     for(uint32_t y=biHeight>0?biHeight-1:0; y!=border; y+=step) {
         for(uint32_t x=0; x<biWidth; ++x) {
             if(((img_data[x>>3]>>(7-(x&7)))&1)==color_val)
-                ssd1306_draw_pixel(p, x_offset+x, y_offset+y);
+                ssd1306_draw_pixel(p, x_offset+x, y_offset+y, true);
         }
         img_data+=bytes_per_line;
     }

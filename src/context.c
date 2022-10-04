@@ -42,7 +42,7 @@ context_t *context_init(context_callback_table_t *callbacks, size_t context_data
 context_screen_t *context_screen_init() {
   context_screen_t *cs = memset(pvPortMalloc(sizeof(context_screen_t)),0,sizeof(context_screen_t));
   cs->mutex=xSemaphoreCreateMutex();
-  cs->pane = bitmap_init(RE_LABEL_TOTAL_WIDTH, RE_LABEL_Y_OFFSET);
+  cs->pane = bitmap_init(RE_LABEL_TOTAL_WIDTH, RE_LABEL_Y_OFFSET, NULL);
   memset(cs->re_labels,0,3*9);
   cs->button_chars[0]=0;
   cs->button_chars[1]=0;
@@ -67,27 +67,18 @@ bitmap_t *context_screen_bitmap(context_screen_t *csh) {
 /* ---------------------------------------------------------------------- */
 
 void context_screen_task(void *parm) {
-  // TODO - rework the ssd1306 code now that we understand it better
   bitmap_t *screen_buffer;
-  ssd1306_t disp;
   context_screen_t *cs;
 
   /*  The screen needs a little time to warm up  */
   vTaskDelay(400 / portTICK_PERIOD_MS);
 
-  log_info("%s", "Initializing Display...");
-  disp.external_vcc=false;
-  ssd1306_init(&disp, SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_I2C_ADDRESS, SCREEN_I2C);
-  ssd1306_clear(&disp);
-  ssd1306_show(&disp);
-
-  log_info("%s", "Display Initialized...");
-
-  screen_buffer = bitmap_init(SCREEN_WIDTH, SCREEN_HEIGHT);
+  screen_buffer = bitmap_init(SCREEN_WIDTH, SCREEN_HEIGHT, b_ssd1306_init);
+  bitmap_clear(screen_buffer);
+  ssd1306_show((ssd1306_t *)screen_buffer->buffer);
 
   for( ;; ) {
     bitmap_clear(screen_buffer);
-    ssd1306_clear(&disp);
 
     if (!xTaskNotifyWaitIndexed( 1, 0u, 0xFFFFFFFFu, (uint32_t *)(& cs), portMAX_DELAY)) continue;
 
@@ -109,8 +100,6 @@ void context_screen_task(void *parm) {
         BUTTON_LABEL_FONT.Height, &BUTTON_LABEL_FONT, cs->button_chars[1]);
     xSemaphoreGive(cs->mutex);
 
-    // TODO:  Make the ssd1306 Bitmap compatible.
-    bitmap_rerender(screen_buffer, SCREEN_WIDTH, SCREEN_HEIGHT, ssd1306_draw_pixel_callback, &disp);
-    ssd1306_show(&disp);
+    ssd1306_show((ssd1306_t *)screen_buffer->buffer);
   }
 }

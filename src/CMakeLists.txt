@@ -21,6 +21,7 @@
 #
 #  Doxygen - build docs
 #
+if (CMAKE_BUILD_TYPE MATCHES "^[Rr]elease")
 
 # first we can indicate the documentation build as an option and set it to ON by default
 option(BUILD_DOC "Build documentation" ON)
@@ -45,6 +46,8 @@ if (DOXYGEN_FOUND)
 else (DOXYGEN_FOUND)
   message("Doxygen need to be installed to generate the doxygen documentation")
 endif (DOXYGEN_FOUND)
+
+endif()
 
 # --------------------------------------------------------------------------------
 
@@ -85,6 +88,7 @@ set(FONT_DEFINES
 
 add_executable(pico_color_picker
   bitmap.c
+  bitmap_ssd1306.c
   buttons.c
   context.c
   io_devices.c

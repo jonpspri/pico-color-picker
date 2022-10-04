@@ -32,6 +32,8 @@ SOFTWARE.
 #define _inc_ssd1306
 #include <pico/stdlib.h>
 #include <hardware/i2c.h>
+
+#include "bitmap.h"
 #include "fonts/font.h"
 
 #ifdef __cplusplus
@@ -147,8 +149,7 @@ void ssd1306_clear(ssd1306_t *p);
     @param[in] x : x position
     @param[in] y : y position
 */
-void ssd1306_draw_pixel(ssd1306_t *p, uint32_t x, uint32_t y);
-extern void ssd1306_draw_pixel_callback(void *p, uint32_t x, uint32_t y, bool value);
+void ssd1306_draw_pixel(ssd1306_t *p, uint32_t x, uint32_t y, bool value);
 
 /**
     @brief draw pixel on buffer
@@ -226,6 +227,10 @@ void ssd1306_draw_char_with_font(ssd1306_t *p, uint32_t x, uint32_t y, uint32_t 
     @param[in] s : text to draw
 */
 void ssd1306_draw_string_with_font(ssd1306_t *p, uint32_t x, uint32_t y, uint32_t scale, const struct bitmap_font *font, char *s );
+
+bool ssd1306_pixel_value(ssd1306_t *p, uint32_t x, uint32_t y);
+
+void b_ssd1306_init(bitmap_t *b);
 
 #ifdef __cplusplus
 }

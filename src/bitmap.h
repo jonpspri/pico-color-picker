@@ -29,15 +29,14 @@
 
 #include "FreeRTOS.h"
 #include "semphr.h"
-#include "ssd1306.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-
 struct bitmap;
 typedef struct bitmap bitmap_t;
+
 struct bitmap {
   uint32_t width;
   uint32_t height;
@@ -52,7 +51,7 @@ struct bitmap {
   void *buffer;
 };
 
-bitmap_t *bitmap_init(uint32_t width, uint32_t height);
+bitmap_t *bitmap_init(uint32_t width, uint32_t height, void (*custom_init)(bitmap_t *));
 
 void bitmap_clear(bitmap_t *);
 void bitmap_draw_pixel(bitmap_t *, uint32_t x, uint32_t y, bool value);

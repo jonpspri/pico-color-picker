@@ -67,19 +67,23 @@ static void w_free_buffer(bitmap_t *b) {
 
 /* ---------------------------------------------------------------------- */
 
-bitmap_t *bitmap_init(uint32_t width, uint32_t height) {
+bitmap_t *bitmap_init(uint32_t width, uint32_t height, void (*custom_init)(bitmap_t *)) {
   bitmap_t *b= pvPortMalloc(sizeof(bitmap_t));
   b->width = width;
   b->height = height;
   b->inverted = false;
 
-  b->draw_pixel = w_draw_pixel;
-  b->pixel_value = w_pixel_value;
-  b->clear = w_clear;
-  b->free_buffer = w_free_buffer;
+  if (!custom_init) {
+    b->draw_pixel = w_draw_pixel;
+    b->pixel_value = w_pixel_value;
+    b->clear = w_clear;
+    b->free_buffer = w_free_buffer;
+    uint32_t b_size = height * WORDS(width) * 4;
+    b->buffer = memset(pvPortMalloc(b_size),0,b_size);
+  } else {
+    custom_init(b);
+  }
 
-  uint32_t b_size = height * WORDS(width) * 4;
-  b->buffer = memset(pvPortMalloc(b_size),0,b_size);
   return b;
 }
 
