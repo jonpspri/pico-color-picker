@@ -18,6 +18,10 @@
  * pico-color-picker. If not, see <https://www.gnu.org/licenses/>.
  */
 
+/** @file bitmap.c
+ *
+ */
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -63,8 +67,15 @@ static void w_free_buffer(bitmap_t *b) {
 
 /* ---------------------------------------------------------------------- */
 
-bitmap_t *bitmap_init(uint32_t width, uint32_t height, void (*custom_init)(bitmap_t *)) {
-  bitmap_t *b= pvPortMalloc(sizeof(bitmap_t));
+/** @brief Initialize a bitmap if needed
+ *  @param b The \ref bitmap_t to be initialized
+ *  @param width Width of the new bitmap
+ *  @param height Height of the new bitmap
+ *  @param custom_init A custom initializer hook for the bitmap, or `NULL` for a standard bitmap.
+ *  @return `true` if initialization was required.
+ */
+bool bitmap_init(bitmap_t *b, uint32_t width, uint32_t height, void (*custom_init)(bitmap_t *)) {
+  if(b->buffer) return false;
   b->width = width;
   b->height = height;
   b->inverted = false;
@@ -79,8 +90,7 @@ bitmap_t *bitmap_init(uint32_t width, uint32_t height, void (*custom_init)(bitma
   } else {
     custom_init(b);
   }
-
-  return b;
+  return true;
 }
 
 void bitmap_free(bitmap_t *bitmap) {

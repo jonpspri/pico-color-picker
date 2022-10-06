@@ -95,6 +95,7 @@ add_executable(pico_color_picker
   io_devices.c
   log.c
   main.c
+  menu.c
   rgb_encoders.c
   ssd1306.c
   ws281x.c
@@ -115,20 +116,23 @@ pico_enable_stdio_uart(pico_color_picker 0)
 target_compile_definitions(pico_color_picker PRIVATE
   ${FONT_DEFINES}
 
-  PICO_WS2812_PIO=0
-  PICO_WS2813B_PIO=0
+  LED_DEVICES_PIO=0
+
   PICO_WS2812_SM=0
-  PICO_WS2813B_SM=1
   PICO_WS2812_PIN=2
-  PICO_WS2813B_PIN=3
   WS2812_PIXEL_COUNT=3
+
+  PICO_WS2813B_SM=1
+  PICO_WS2813B_PIN=3
   WS2813B_PIXEL_COUNT=14
 
   IO_DEVICES_PIO=1
 
+  ROTARY_ENCODER_COUNT=3;
   ROTARY_ENCODER_SM=0
   ROTARY_ENCODER_DIVISOR=4
   ROTARY_ENCODER_LOW_PIN=14
+
   ROTARY_ENCODER_RED_OFFSET=0
   ROTARY_ENCODER_RED_INVERTED=false
   ROTARY_ENCODER_GREEN_OFFSET=1
@@ -136,8 +140,10 @@ target_compile_definitions(pico_color_picker PRIVATE
   ROTARY_ENCODER_BLUE_OFFSET=3
   ROTARY_ENCODER_BLUE_INVERTED=false
 
+  BUTTON_COUNT=2
   BUTTON_SM=1
   BUTTON_LOW_PIN=6
+
   BUTTON_UPPER_OFFSET=0
   BUTTON_LOWER_OFFSET=1
   BUTTON_RED_OFFSET=7
@@ -153,7 +159,7 @@ target_compile_definitions(pico_color_picker PRIVATE
 
   LOG_USE_COLOR
   LOG_LEVEL=LOG_DEBUG
-  PICO_DEBUG_MALLOC
+  #PICO_DEBUG_MALLOC
   )
 
 target_include_directories(pico_color_picker PUBLIC ${CMAKE_SOURCE_DIR}/config)
@@ -163,8 +169,6 @@ target_link_libraries(pico_color_picker PRIVATE
   FreeRTOS-Kernel-Heap4
   pico_stdlib
   pico_binary_info
-  pico_mem_ops
-  pico_multicore
   pico_time
   hardware_i2c
   hardware_pio

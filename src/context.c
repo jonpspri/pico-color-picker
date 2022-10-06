@@ -18,88 +18,105 @@
  * pico-color-picker. If not, see <https://www.gnu.org/licenses/>.
  */
 
+/** @file context.c
+ *
+ */
 #include <stdlib.h>
 #include <string.h>
 
+#include "pcp.h"
 #include "context.h"
 #include "log.h"
 #include "ssd1306.h"
+#include "ws281x.h"
 
 #define RE_LABEL_Y_OFFSET (SCREEN_HEIGHT - RE_LABEL_FONT.Height)
 #define RE_LABEL_TOTAL_WIDTH (SCREEN_WIDTH - BUTTON_LABEL_FONT.Width)
 
 /* ---------------------------------------------------------------------- */
 
-context_t *context_init(context_callback_table_t *callbacks, size_t context_data_size, void *context_data) {
-  context_t* context = (context_t *)pvPortMalloc((sizeof(context_t)));
-  context->context_data_size = context_data_size;
+bool context_init(context_t *context, context_t *parent, context_callback_table_t *callbacks, context_screen_t *screen, void *context_data) {
+  if (context->context_data) return false;
+  context->magic_number = CONTEXT_T;
+  context->callbacks = callbacks;
+  context->parent = parent;
+  context->screen = screen;
   context->context_data = context_data;
-  return (context_t *)context;
+  return true;
 }
 
 /* ---------------------------------------------------------------------- */
 
-context_screen_t *context_screen_init() {
-  context_screen_t *cs = memset(pvPortMalloc(sizeof(context_screen_t)),0,sizeof(context_screen_t));
+/** @brief Initialize a _context screen_ if necessary.  Can be safely called
+ *         on the same object multiple times.
+ *
+ *  @param  cs The \ref context_screen_t object to be initialized.
+ *
+ *  @return `true` if futher initialization is required (e.g. set button text).
+ */
+bool context_screen_init(context_screen_t *cs) {
+  if (cs->mutex) return false;
+  cs->magic_number=CONTEXT_SCREEN_T;
   cs->mutex=xSemaphoreCreateMutex();
-  cs->pane = bitmap_init(RE_LABEL_TOTAL_WIDTH, RE_LABEL_Y_OFFSET, NULL);
+  bitmap_init(&cs->pane, RE_LABEL_TOTAL_WIDTH, RE_LABEL_Y_OFFSET, NULL);
   memset(cs->re_labels,0,3*9);
   cs->button_chars[0]=0;
   cs->button_chars[1]=0;
-  return (context_screen_t *)cs;
+  return true;
 }
 
-void context_screen_set_re_label(context_screen_t *csh, uint8_t i, const char *str) {
-  context_screen_t *cs = (context_screen_t *)csh;
-  strncat(cs->re_labels[i], str, 8);
-}
-
-void context_screen_set_button_char(context_screen_t *csh, uint8_t i, uint16_t c) {
-  context_screen_t *cs = (context_screen_t *)csh;
-  cs->button_chars[i] = c;
-}
-
-bitmap_t *context_screen_bitmap(context_screen_t *csh) {
-  context_screen_t *cs = (context_screen_t *)csh;
-  return cs->pane;
-}
 
 /* ---------------------------------------------------------------------- */
 
 void context_screen_task(void *parm) {
-  bitmap_t *screen_buffer;
-  context_screen_t *cs;
+  static bitmap_t screen_buffer;
+  static context_screen_t *cs;
 
   /*  The screen needs a little time to warm up  */
   vTaskDelay(400 / portTICK_PERIOD_MS);
 
-  screen_buffer = bitmap_init(SCREEN_WIDTH, SCREEN_HEIGHT, b_ssd1306_init);
-  bitmap_clear(screen_buffer);
-  ssd1306_show((ssd1306_t *)screen_buffer->buffer);
+  bitmap_init(&screen_buffer, SCREEN_WIDTH, SCREEN_HEIGHT, b_ssd1306_init);
+  bitmap_clear(&screen_buffer);
+  ssd1306_show((ssd1306_t *)screen_buffer.buffer);
 
   for( ;; ) {
-    bitmap_clear(screen_buffer);
+    bitmap_clear(&screen_buffer);
 
     if (!xTaskNotifyWaitIndexed( 1, 0u, 0xFFFFFFFFu, (uint32_t *)(& cs), portMAX_DELAY)) continue;
+    assert(cs->magic_number == CONTEXT_SCREEN_T);
 
+    /* If an assert fails in the xSemaphoreTake, it likely means the ContextScreen is corrupt */
     xSemaphoreTake(cs->mutex, portMAX_DELAY);
-    bitmap_copy_from(screen_buffer, cs->pane, 0, 0);
-    bitmap_draw_string(screen_buffer, 0, RE_LABEL_Y_OFFSET, &TRIPLE_LINE_TEXT_FONT, cs->re_labels[0]);
-    bitmap_draw_string(screen_buffer,
+    bitmap_copy_from(&screen_buffer, &cs->pane, 0, 0);
+    bitmap_draw_string(&screen_buffer, 0, RE_LABEL_Y_OFFSET, &TRIPLE_LINE_TEXT_FONT, cs->re_labels[0]);
+    bitmap_draw_string(&screen_buffer,
         (RE_LABEL_TOTAL_WIDTH - TRIPLE_LINE_TEXT_FONT.Width*strnlen(cs->re_labels[1],8))/2,
         RE_LABEL_Y_OFFSET, &TRIPLE_LINE_TEXT_FONT, cs->re_labels[1]);
-    bitmap_draw_string(screen_buffer,
+    bitmap_draw_string(&screen_buffer,
         RE_LABEL_TOTAL_WIDTH - TRIPLE_LINE_TEXT_FONT.Width*strnlen(cs->re_labels[2],8),
         RE_LABEL_Y_OFFSET, &TRIPLE_LINE_TEXT_FONT, cs->re_labels[2]);
 
     /*
      * Draw the chevrons if they're there
      */
-    bitmap_draw_char(screen_buffer, RE_LABEL_TOTAL_WIDTH, 0, &BUTTON_LABEL_FONT, cs->button_chars[0]);
-    bitmap_draw_char(screen_buffer, RE_LABEL_TOTAL_WIDTH,
+    bitmap_draw_char(&screen_buffer, RE_LABEL_TOTAL_WIDTH, 0, &BUTTON_LABEL_FONT, cs->button_chars[0]);
+    bitmap_draw_char(&screen_buffer, RE_LABEL_TOTAL_WIDTH,
         BUTTON_LABEL_FONT.Height, &BUTTON_LABEL_FONT, cs->button_chars[1]);
     xSemaphoreGive(cs->mutex);
 
-    ssd1306_show((ssd1306_t *)screen_buffer->buffer);
+    ssd1306_show((ssd1306_t *)screen_buffer.buffer);
+  }
+}
+
+void context_leds_task(void * parm) {
+  static struct context_leds *rgbs;
+  for( ;; ) {
+    /* Set the context_leds_object */
+    xTaskNotifyWaitIndexed(NFCN_IDX_RGBS, 0u, 0u, (uint32_t *)&rgbs, rgbs ? 0 : portMAX_DELAY);
+    if (!rgbs) continue;
+    assert(rgbs->magic_number == CONTEXT_LEDS_T);
+
+    ws2812_put_pixels(rgbs->rgb_p, 3);
+    if (!xTaskNotifyWaitIndexed( 1, 0u, 0xFFFFFFFFu, NULL, portMAX_DELAY)) continue;
   }
 }

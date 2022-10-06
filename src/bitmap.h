@@ -51,7 +51,8 @@ struct bitmap {
   void *buffer;
 };
 
-bitmap_t *bitmap_init(uint32_t width, uint32_t height, void (*custom_init)(bitmap_t *));
+bool bitmap_init(bitmap_t *b, uint32_t width, uint32_t height, void (*custom_init)(bitmap_t *));
+void bitmap_free(bitmap_t *bitmap);
 
 void bitmap_draw_char(bitmap_t *, uint32_t x, uint32_t y, const struct bitmap_font *font, uint16_t c);
 void bitmap_draw_empty_square(bitmap_t *, uint32_t x, uint32_t y, uint32_t width, uint32_t height);

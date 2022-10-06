@@ -18,17 +18,27 @@
  * pico-color-picker. If not, see <https://www.gnu.org/licenses/>.
  */
 
+/** @file colors.c
+ *
+ *  Mange the colors menu.  Currently behaves as a singleton object, assuming there
+ *  is only one color main menu in the structure.
+ */
+
 #include <stdio.h>
+#include <string.h>
 
 #include "pico/stdlib.h"
 
 #include "bitmap.h"
 #include "context.h"
+#include "menu.h"
 
-static struct {
-  char *note_name;
+typedef struct note_color {
+  const char *note_name;
   uint32_t rgb;
-} note_colors[] = {
+} note_color_t;
+
+static const note_color_t initial_note_colors[12] = {
   { "C", 0xFF0000 },
   { "C#/Db", 0xcc1100 },
   { "D", 0xbb2200 },
@@ -43,77 +53,58 @@ static struct {
   { "B", 0xB8154A }
 };
 
-typedef struct colors_menu_item {
-  bool checked;
-  context_t *context;
-  uint32_t rgb;
-} colors_menu_item_t;
 
-typedef struct colors_menu {
-  int8_t cursor_at;
-  colors_menu_item_t colors[12];
-} colors_menu_t;
+static uint32_t rgbs[3];
+static bool color_items_initialized;
+static struct context_leds rgb_ptrs;
+static menu_item_t color_items[12];
+static note_color_t note_colors[12];
+static menu_t colors_menu;
 
-static context_callback_table_t colors_callbacks;
-static colors_menu_t colors_menu;
+static menu_item_t *color_menu_items() {
+#ifndef NDEBUG
+  /*  Validate that the initialize code is only called once */
+  static bool initialize_called;
+  assert(!initialize_called);
+  initialize_called = true;
+#endif
 
-static void colors_menu_re_callback(void *data, v32_t v) {
-  int8_t idx = colors_menu.cursor_at;
-  idx += v.s;
-  idx = MAX(idx, 0);
-  idx = MIN(idx, 11);
-  colors_menu.cursor_at = idx;
-}
-
-static void colors_menu_ui_callback(void *data, v32_t v) {
-  static context_screen_t *cs;
-  static bitmap_t *item_bitmap;
-  static char buffer[25];
-  static uint8_t screen_at = 0;
-
-  if (!cs) {
-    cs = context_screen_init();
-    context_screen_set_re_label(cs, 0, "Up/Down");
-    context_screen_set_button_char(cs, 0, 32);
-    context_screen_set_button_char(cs, 1, RAQUO);
-  }
-
-  if (!item_bitmap) {
-    item_bitmap = bitmap_init(cs->pane->width, cs->pane->height/3, NULL);
-  }
-
-  screen_at = MIN(screen_at, colors_menu.cursor_at);
-  screen_at = MAX(screen_at, colors_menu.cursor_at-2);
-
-  bitmap_clear(cs->pane);
-  for(uint8_t i=0; i<3; i++) {
-    bitmap_clear(item_bitmap);
-    uint8_t idx = i+screen_at;
-    sprintf(buffer, "%-5s #%06lx", note_colors[idx].note_name, colors_menu.colors[idx].rgb);
-    bitmap_draw_empty_square(item_bitmap, 0, 1, 4, 5);
-    bitmap_draw_string(item_bitmap, 8, 0, &TRIPLE_LINE_TEXT_FONT, buffer);
-    if (idx == colors_menu.cursor_at) bitmap_invert(item_bitmap);
-    bitmap_copy_from(cs->pane, item_bitmap, 0, i*cs->pane->height/3);
-  }
-
-  xTaskNotifyIndexed(tasks.screen, 1, (uint32_t)cs, eSetValueWithOverwrite);
-  xTaskNotifyIndexed(tasks.leds, 1, colors_menu.colors[colors_menu.cursor_at].rgb, eSetValueWithOverwrite);
-}
-
-void colors_context_enable(context_t *context) {
-  if(tasks.rotary_encoders)
-    xTaskNotifyIndexed(tasks.rotary_encoders, 2, (uint32_t)&colors_callbacks, eSetValueWithOverwrite);
-  if(tasks.buttons)
-    xTaskNotifyIndexed(tasks.buttons, 2, (uint32_t)&colors_callbacks, eSetValueWithOverwrite);
-}
-
-context_t *colors_context_init() {
+  if (color_items_initialized) return color_items;
+  memcpy(note_colors, initial_note_colors, sizeof(note_colors));
   for (uint8_t i=0; i<12; i++) {
-    colors_menu.colors[i].rgb = note_colors[i].rgb;
+    color_items[i].selectable = true;
+    color_items[i].selected = 0;
+    color_items[i].context = NULL;
+    color_items[i].data = &note_colors[i];
   }
+  color_items_initialized = true;
 
-  colors_callbacks.re_handlers[ROTARY_ENCODER_RED_OFFSET].callback=colors_menu_re_callback;
-  colors_callbacks.ui_update.callback=colors_menu_ui_callback;
+  for (uint8_t i=0; i<3; i++) rgb_ptrs.rgb_p[i] = &rgbs[i];
 
-  return context_init(&colors_callbacks, sizeof(colors_menu), &colors_menu);
+  return color_items;
+}
+
+static void menu_render_item(menu_item_t *item, bitmap_t *item_bitmap, uint8_t offset) {
+  char buffer[25];
+  note_color_t *nc = (note_color_t *)item->data;
+  bitmap_clear(item_bitmap);
+  sprintf(buffer, "%-5s #%06lx", nc->note_name, nc->rgb);
+  bitmap_draw_string(item_bitmap, 8, 0, &TRIPLE_LINE_TEXT_FONT, buffer);
+  if(!item->selectable) return;
+  if(item->selected) {
+    bitmap_draw_square(item_bitmap, 0, 1, 4, 5);
+  } else {
+    bitmap_draw_empty_square(item_bitmap, 0, 1, 4, 5);
+  }
+  rgbs[offset] = nc->rgb;
+}
+
+bool colors_menu_context_init(context_t *c, context_t *parent) {
+  assert(!colors_menu.items); /* This function should be called only once */
+
+  colors_menu.menu_item_count = 12;
+  colors_menu.render_item = menu_render_item;
+  colors_menu.items = color_menu_items();
+
+  return menu_context_init(c, parent, &colors_menu);
 }

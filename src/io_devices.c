@@ -72,6 +72,7 @@ typedef struct {
 
 static button_info buttons[8];
 
+#ifdef PCP_TRACK_TRANSITIONS
 typedef struct {
   uint32_t rx;
   uint16_t idx;
@@ -79,12 +80,15 @@ typedef struct {
   int8_t sub_count;
 } transition_history_t;
 uint8_t transition_history_idx;
+#endif
 
 typedef struct {
   bool inverted;
   int8_t sub_count;
   bool enabled;
+#ifdef PCP_TRACK_TRANSITIONS
   transition_history_t *transition_history;
+#endif
 } rotary_encoder_info;
 
 static rotary_encoder_info rotary_encoders[4];
@@ -189,11 +193,13 @@ __isr static void rotary_encoder_interrupt_handler(PIO pio, uint8_t sm, TaskHand
         notify_bits |= 1 << (i*2+1);
         re->sub_count = 0;
       }
+#ifdef PCP_TRACK_TRANSITIONS
       re->transition_history[transition_history_idx].rx = rx;
       re->transition_history[transition_history_idx].idx = idx;
       re->transition_history[transition_history_idx].delta = transitions[idx];
       re->transition_history[transition_history_idx].sub_count = re->sub_count;
       transition_history_idx++;
+#endif
     }
   }
 
@@ -246,8 +252,10 @@ static void init_pin(uint8_t pin) {
 void io_devices_register_encoder( uint8_t re_number, bool inverted) {
   rotary_encoders[re_number].inverted = inverted;
   rotary_encoders[re_number].enabled = true;
+#ifdef PCP_TRACK_TRANSITIONS
   rotary_encoders[re_number].transition_history =
     memset(pvPortMalloc(sizeof(transition_history_t)*256),0,sizeof(transition_history_t)*256);
+#endif
 }
 
 void io_devices_register_button( uint8_t button_number) {

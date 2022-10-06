@@ -21,23 +21,17 @@
 #ifndef __COLORS_H
 #define __COLORS_H
 
+#include "menu.h"
+#include "bitmap.h"
+
+#define COLORS_COUNT 12
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "context.h"
-
-typedef void format_data(char *buffer, uint8_t buffer_size, void *data);
-
-typedef struct menu_item {
-  bool has_checkbox;
-  bool checked;
-  context_t *enter_context;   /* TODO: Flesh out what I need to do this */
-} menu_item_t;
-
-
-extern void colors_context_enable(context_t *menu_context);
-extern context_t *colors_context_init();
+menu_item_t *color_menu_items();
+void menu_render_item(menu_item_t *item, bitmap_t *item_bitmap);
 
 #ifdef __cplusplus
 }

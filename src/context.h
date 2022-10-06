@@ -1,5 +1,4 @@
-/* vim: set ft=cpp:
- *
+/*
  * SPDX-FileCopyrightText: 2022 Jonathan Springer
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -22,19 +21,22 @@
 #ifndef __CONTEXT_H
 #define __CONTEXT_H
 
+#include <string.h>
+
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
 
 #include "pico/stdlib.h"
 
+#include "pcp.h"
 #include "bitmap.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/*------------------------------------------------------------------------------
+/** @file context.h
  *
  * CONTEXTS:
  *
@@ -54,40 +56,61 @@ extern "C" {
  * be a context.
  */
 
-union v32 {
+/* Forward declarations */
+typedef struct context context_t;
+
+typedef union v32 {
 #ifdef __cplusplus
   v32(int32_t x) : s(x) { };
   v32(uint32_t x) : u(x) { };
 #endif
   int32_t s;
   uint32_t u;
-};
+} v32_t;
 
-typedef union v32 v32_t;
-
-typedef struct context_callback {
+typedef struct {
   void (*callback)(void *, v32_t);
   void *data;
 } context_callback_t;
 
-typedef struct context_callback_table {
+typedef struct {
+  void (*callback)(context_t *c, void *, v32_t);
+  void *data;
+} context_ui_callback_t;
+
+typedef struct {
   context_callback_t button_handlers[8];
   context_callback_t re_handlers[4];
-  context_callback_t ui_update;
+  context_ui_callback_t ui_update;
 } context_callback_table_t;
 
-typedef struct context {
-  context_callback_table_t *callbacks;
-  size_t context_data_size;
-  void *context_data;
-} context_t;
-
 typedef struct context_screen {
+  uint32_t magic_number;
   SemaphoreHandle_t mutex;
-  bitmap_t *pane;
-  char re_labels[3][9];
-  uint16_t button_chars[2];
+  /* TODO: "Dynamically" calculate max-width and allocate */
+  char re_labels[ROTARY_ENCODER_COUNT][9];
+  uint16_t button_chars[BUTTON_COUNT];
+  bitmap_t pane;
 } context_screen_t;
+
+struct context {
+  uint32_t magic_number;
+  context_callback_table_t *callbacks;
+  context_t *parent;
+  context_screen_t *screen;
+  void *context_data;
+};
+
+/** @brief Hold the current configuration of the three WS2812 RGBs on the board.
+ *
+ *  Note that we use pointers so that if a different portion of the program
+ *  changes the actual value, the display will automatically update.  Think of
+ *  this as a quick and dirty "observer" pattern.
+ */
+typedef struct context_leds {
+  uint32_t magic_number;
+  uint32_t *rgb_p[WS2812_PIXEL_COUNT];
+} context_leds_t;
 
 typedef struct task_list {
   TaskHandle_t rotary_encoders;
@@ -96,17 +119,29 @@ typedef struct task_list {
   TaskHandle_t leds;
 } task_list_t;
 
+extern struct context_rgbs ws2812_rgbs;
+
 extern task_list_t tasks;
 
-extern context_t *context_init(context_callback_table_t *callbacks, size_t context_data_size, void *context_data);
+extern bool context_init(context_t *context, context_t *parent, context_callback_table_t *callbacks, context_screen_t *screen, void *context_data);
 
-extern context_screen_t *context_screen_init();
-extern void context_screen_set_re_label(context_screen_t *, uint8_t, const char *);
+extern bool context_screen_init(context_screen_t *cs);
 extern void context_screen_set_button_char(context_screen_t *, uint8_t, uint16_t);
 
+extern void context_leds_task(void *parm);
 extern void context_screen_task(void *parm);
+
+static inline void context_screen_set_re_label(context_screen_t *csh, uint8_t i, const char *label) {
+  strncpy(csh->re_labels[i], label, 9);
+}
+
 #ifdef __cplusplus
 }
 #endif
+
+inline static void context_enable(context_t *c) {
+  if (tasks.rotary_encoders) xTaskNotifyIndexed(tasks.rotary_encoders, NFCN_IDX_CONTEXT, (uint32_t)c, eSetValueWithOverwrite);
+  if (tasks.buttons) xTaskNotifyIndexed(tasks.buttons, NFCN_IDX_CONTEXT, (uint32_t)c, eSetValueWithOverwrite);
+}
 
 #endif
