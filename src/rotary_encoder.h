@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: 2022 Jonathan Springer
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
-
+ *
  * This file is part of pico-color-picker.
  *
  * pico-color-picker is free software: you can redistribute it and/or modify it under the
@@ -18,22 +18,16 @@
  * pico-color-picker. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef __COLORS_H
-#define __COLORS_H
+#ifndef __ROTARY_ENCODER_H
+#define __ROTARY_ENCODER_H
 
-#include "menu.h"
-#include "bitmap.h"
-
-#define COLORS_COUNT 12
+#include "pico/stdlib.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-menu_item_t *color_menu_items();
-void menu_render_item(menu_item_t *item, bitmap_t *item_bitmap);
-bool colors_menu_context_init(context_t *c, context_t *parent);
-void colors_menu_enable(context_t *c);
+void rotary_encoder_task(void *);
 
 #ifdef __cplusplus
 }

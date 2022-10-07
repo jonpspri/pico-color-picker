@@ -35,12 +35,13 @@
 #include "hardware/i2c.h"
 
 /* pico-color-picker includes */
-#include "buttons.h"
+#include "button.h"
 #include "context.h"
-#include "colors.h"
-#include "io_devices.h"
+#include "color.h"
+#include "input.h"
 #include "log.h"
-#include "rgb_encoders.h"
+#include "rgb_encoder.h"
+#include "rotary_encoder.h"
 #include "ws281x.h"
 
 #include "fonts/font.h"
@@ -63,44 +64,12 @@ void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName )
 
 /*-----------------------------------------------------------*/
 
-/*
- *  Task definitions
- */
-
-task_list_t tasks;
-
-void task_rotary_encoders(void *parm) {
-  context_t *context = NULL;
-
-  io_devices_register_encoder(ROTARY_ENCODER_RED_OFFSET, ROTARY_ENCODER_RED_INVERTED);
-  io_devices_register_encoder(ROTARY_ENCODER_GREEN_OFFSET, ROTARY_ENCODER_GREEN_INVERTED);
-  io_devices_register_encoder(ROTARY_ENCODER_BLUE_OFFSET, ROTARY_ENCODER_BLUE_INVERTED);
-  io_devices_init_encoders(ROTARY_ENCODER_LOW_PIN, ROTARY_ENCODER_SM);
-
-  uint32_t bits = 0u;
-
-  for( ;; ) {
-    /* Update the context if necessary */
-    xTaskNotifyWaitIndexed(NFCN_IDX_CONTEXT, 0u, 0u, (uint32_t *)(&context), context? 0 : portMAX_DELAY);
-    assert(!context || context->magic_number == CONTEXT_T);
-
-    for (int i=0; context && i<4; i++, bits >>= 2) {
-      context_callback_t *c = &context->callbacks->re_handlers[i];
-      if(!c->callback || !(bits & 3u)) continue;
-      v32_t delta = (v32_t)((int32_t)0);
-      if(bits & 1u) delta.s=1;
-      if(bits & 2u) delta.s=-1;
-      c->callback(c->data, delta);
-    }
-
-    if (context->callbacks->ui_update.callback) {
-      context->callbacks->ui_update.callback(context, context->callbacks->ui_update.data, (v32_t)0ul);
-    }
-
-    if (!xTaskNotifyWaitIndexed(NFCN_IDX_EVENT, 0u, 0xFFFFFFFFu, &bits, portMAX_DELAY)) continue;
-  }
+void log_lock(bool acq, void *data) {
+  if (acq) xSemaphoreTake((SemaphoreHandle_t)data, portMAX_DELAY);
+  else xSemaphoreGive((SemaphoreHandle_t)data);
 }
 
+task_list_t tasks;
 int main() {
   static context_t rgb_context;  /* TEMPORARY */
   static uint32_t rgb = 0;       /* TEMPORARY */
@@ -110,9 +79,11 @@ int main() {
 #if LIB_PICO_STDIO_USB && !defined(NDEBUG)
   while (!stdio_usb_connected()) { sleep_ms(100); }
 #endif
+  log_set_lock(log_lock, (void *)xSemaphoreCreateMutex());
 #ifdef LOG_LEVEL
   log_set_level(LOG_LEVEL);
 #endif
+  log_trace("Trace enabled.");
   log_info("%s", "Initializing PIO for LEDs...");
   ws281x_pio_init();
 
@@ -126,10 +97,10 @@ int main() {
   /*
    * Start the tasks
    */
-  xTaskCreate(task_rotary_encoders, "Rotary Encoders Task",
+  xTaskCreate(rotary_encoder_task, "Rotary Encoders Task",
       configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 2, &tasks.rotary_encoders);
 
-  xTaskCreate(button_task, "Buttons Task",
+  xTaskCreate(buttons_task, "Buttons Task",
       configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 2, &tasks.buttons);
 
   xTaskCreate(context_screen_task, "Screen Task",
@@ -139,10 +110,10 @@ int main() {
       configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, &tasks.leds);
 
   /* colors_menu_context_init(&menu_context, NULL); */
-  /* colors_menu_enable(&menu_context); */
+  /* context_enable(&menu_context); */
 
   rgb_encoders_context_init(&rgb_context, NULL, &rgb);
-  rgb_encoders_enable(&rgb_context);
+  context_enable(&rgb_context);
 
   vTaskStartScheduler();
 

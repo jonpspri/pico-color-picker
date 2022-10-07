@@ -89,14 +89,15 @@ set(FONT_DEFINES
 add_executable(pico_color_picker
   bitmap.c
   bitmap_ssd1306.c
-  buttons.c
-  colors.c
+  button.c
+  color.c
   context.c
-  io_devices.c
+  input.c
   log.c
   main.c
   menu.c
-  rgb_encoders.c
+  rgb_encoder.c
+  rotary_encoder.c
   ssd1306.c
   ws281x.c
 
@@ -127,6 +128,7 @@ target_compile_definitions(pico_color_picker PRIVATE
   WS2813B_PIXEL_COUNT=14
 
   IO_DEVICES_PIO=1
+  IO_PIO_SLOTS=8
 
   ROTARY_ENCODER_COUNT=3;
   ROTARY_ENCODER_SM=0
@@ -158,15 +160,15 @@ target_compile_definitions(pico_color_picker PRIVATE
   SCREEN_HEIGHT=32
 
   LOG_USE_COLOR
-  LOG_LEVEL=LOG_DEBUG
-  #PICO_DEBUG_MALLOC
+  LOG_LEVEL=LOG_TRACE
+  PICO_DEBUG_MALLOC
   )
 
 target_include_directories(pico_color_picker PUBLIC ${CMAKE_SOURCE_DIR}/config)
 
 target_link_libraries(pico_color_picker PRIVATE
   FreeRTOS-Kernel
-  FreeRTOS-Kernel-Heap4
+  FreeRTOS-Kernel-Heap3
   pico_stdlib
   pico_binary_info
   pico_time

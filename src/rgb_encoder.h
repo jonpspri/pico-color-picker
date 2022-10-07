@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: 2022 Jonathan Springer
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
- *
+
  * This file is part of pico-color-picker.
  *
  * pico-color-picker is free software: you can redistribute it and/or modify it under the
@@ -18,38 +18,22 @@
  * pico-color-picker. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef __PCP_H
-#define __PCP_H
+#ifndef __RGB_ENCODERS_H
+#define __RGB_ENCODERS_H
 
-/** @file php.h
- *
- *  @brief Pico Color Picker system-wide header file
- */
+#include "context.h"
 
-#include <string.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#include "FreeRTOS.h"
+/* OPAQUE */
+typedef struct rgb_encoders_data rgb_encoders_data_t;
 
-/* ----------------------------------------------------------------------- */
+bool rgb_encoders_context_init(context_t *, context_t *parent, uint32_t *rgb);
 
-/* MAGIC NUMBERS */
+#ifdef __cplusplus
+}
+#endif
 
-#define UINITIALIZED        0x00
-#define CONTEXT_SCREEN_T    0x01
-#define RGB_ENCODER_T       0x02
-#define RGB_ENCODERS_DATA_T 0x03
-#define CONTEXT_T           0x04
-#define CONTEXT_LEDS_T      0x05
-
-/* THREAD_LOCAL_STORAGE */
-#define TH_LOC_ST_CALLBACKS       0
-
-/* NOTIFICATION INDICES */
-#define NTFCN_IDX_EVENT            1
-#define NTFCN_IDX_CONTEXT          2
-
-/* ----------------------------------------------------------------------- */
-
-static inline void *pcp_zero_malloc(size_t s) { return memset(pvPortMalloc(s),0,s); }
-
-#endif /* __PCP_H */
+#endif

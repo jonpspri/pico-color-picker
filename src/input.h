@@ -1,4 +1,4 @@
-/* vim: set ft=cpp:
+/*
  * SPDX-FileCopyrightText: 2022 Jonathan Springer
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -18,16 +18,27 @@
  * pico-color-picker. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef __BUTTON_H
-#define __BUTTON_H
+#ifndef __INPUT_H
+#define __INPUT_H
+
+#include "FreeRTOS.h"
+#include "task.h"
 
 #include "pico/stdlib.h"
+#include "hardware/pio.h"
 
-#include "context.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-extern uint8_t button_depressed;
-static inline bool button_depressed_p(uint8_t index) { assert(index<8); return button_depressed & (1<<index); }
+typedef void (*irq_interrupt_handler_type)(PIO, uint8_t, TaskHandle_t);
 
-void button_task(void *parm);
+void input_init_pin(uint8_t pin);
+void input_init_sm(uint8_t low_pin, uint8_t sm);
+void input_pio_irq_set_handler(PIO pio, uint8_t sm, irq_interrupt_handler_type handler, TaskHandle_t arg, int mask);
 
-#endif /* __BUTTON_H */
+#ifdef __cplusplus
+}
+#endif
+
+#endif

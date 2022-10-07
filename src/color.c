@@ -32,7 +32,7 @@
 #include "bitmap.h"
 #include "context.h"
 #include "menu.h"
-#include "rgb_encoders.h"
+#include "rgb_encoder.h"
 
 typedef struct note_color {
   const char *note_name;
@@ -57,7 +57,7 @@ static const note_color_t initial_note_colors[12] = {
 
 static uint32_t rgbs[3];
 static bool color_items_initialized;
-static struct context_leds rgb_ptrs;
+static context_leds_t rgb_ptrs;
 static menu_item_t color_items[12];
 static note_color_t note_colors[12];
 static menu_t colors_menu;
@@ -110,9 +110,4 @@ bool colors_menu_context_init(context_t *c, context_t *parent) {
   colors_menu.items = color_menu_items(c);
 
   return menu_context_init(c, parent, &colors_menu);
-}
-
-void colors_menu_enable(context_t *c) {
-  xTaskNotifyIndexed(tasks.leds, NFCN_IDX_RGBS, (uint32_t)&rgb_ptrs, eSetValueWithOverwrite);
-  context_enable(c);
 }

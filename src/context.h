@@ -69,7 +69,7 @@ typedef union v32 {
 } v32_t;
 
 typedef struct {
-  void (*callback)(void *, v32_t);
+  void (*callback)(context_t *c, void *, v32_t);
   void *data;
 } context_callback_t;
 
@@ -79,9 +79,10 @@ typedef struct {
 } context_ui_callback_t;
 
 typedef struct {
-  context_callback_t button_handlers[8];
-  context_callback_t re_handlers[4];
-  context_ui_callback_t ui_update;
+  context_callback_t button[IO_PIO_SLOTS];
+  context_callback_t re[IO_PIO_SLOTS/2];
+  context_callback_t screen;
+  context_callback_t led;
 } context_callback_table_t;
 
 typedef struct context_screen {
@@ -93,24 +94,25 @@ typedef struct context_screen {
   bitmap_t pane;
 } context_screen_t;
 
-struct context {
-  uint32_t magic_number;
-  context_callback_table_t *callbacks;
-  context_t *parent;
-  context_screen_t *screen;
-  void *context_data;
-};
-
 /** @brief Hold the current configuration of the three WS2812 RGBs on the board.
  *
  *  Note that we use pointers so that if a different portion of the program
  *  changes the actual value, the display will automatically update.  Think of
  *  this as a quick and dirty "observer" pattern.
  */
-typedef struct context_leds {
+typedef struct {
   uint32_t magic_number;
   uint32_t *rgb_p[WS2812_PIXEL_COUNT];
 } context_leds_t;
+
+struct context {
+  uint32_t magic_number;
+  context_callback_table_t *callbacks;
+  context_t *parent;
+  context_screen_t *screen;
+  context_leds_t *leds;
+  void *context_data;
+};
 
 typedef struct task_list {
   TaskHandle_t rotary_encoders;
@@ -123,7 +125,12 @@ extern struct context_rgbs ws2812_rgbs;
 
 extern task_list_t tasks;
 
-extern bool context_init(context_t *context, context_t *parent, context_callback_table_t *callbacks, context_screen_t *screen, void *context_data);
+extern bool context_init(context_t *context,
+    context_t *parent,
+    context_callback_table_t *callbacks,
+    context_screen_t *screen,
+    context_leds_t *leds,
+    void *context_data);
 
 extern bool context_screen_init(context_screen_t *cs);
 static inline void context_screen_set_button_char(context_screen_t *cs, uint8_t i, uint16_t c) { cs->button_chars[i] = c; }
@@ -139,9 +146,18 @@ static inline void context_screen_set_re_label(context_screen_t *csh, uint8_t i,
 }
 #endif
 
-inline static void context_enable(context_t *c) {
-  if (tasks.rotary_encoders) xTaskNotifyIndexed(tasks.rotary_encoders, NFCN_IDX_CONTEXT, (uint32_t)c, eSetValueWithOverwrite);
-  if (tasks.buttons) xTaskNotifyIndexed(tasks.buttons, NFCN_IDX_CONTEXT, (uint32_t)c, eSetValueWithOverwrite);
+inline static void context_notify_ui(context_t *c) {
+  xTaskNotifyIndexed(tasks.screen, NTFCN_IDX_EVENT, (uint32_t)c, eSetValueWithOverwrite);
+  xTaskNotifyIndexed(tasks.leds, NTFCN_IDX_EVENT, (uint32_t)c, eSetValueWithOverwrite);
 }
+
+inline static void context_enable(context_t *c) {
+  if (tasks.rotary_encoders)
+    xTaskNotifyIndexed(tasks.rotary_encoders, NTFCN_IDX_CONTEXT, (uint32_t)c, eSetValueWithOverwrite);
+  if (tasks.buttons)
+    xTaskNotifyIndexed(tasks.buttons, NTFCN_IDX_CONTEXT, (uint32_t)c, eSetValueWithOverwrite);
+  context_notify_ui(c);
+}
+
 
 #endif

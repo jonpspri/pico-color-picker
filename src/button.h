@@ -1,4 +1,4 @@
-/*
+/* vim: set ft=cpp:
  * SPDX-FileCopyrightText: 2022 Jonathan Springer
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -18,22 +18,19 @@
  * pico-color-picker. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef __ROTARY_ENCODER_H
-#define __ROTARY_ENCODER_H
+#ifndef __BUTTONS_H
+#define __BUTTONS_H
 
 #include "pico/stdlib.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "context.h"
 
-void io_devices_register_encoder(uint8_t re_number, bool inverted);
-void io_devices_init_encoders(uint8_t pin, uint8_t sm);
-void io_devices_register_button(uint8_t button_number);
-void io_devices_init_buttons(uint8_t pin, uint8_t sm);
+extern uint8_t buttons;
+extern uint8_t button_depressed;
 
-#ifdef __cplusplus
-}
-#endif
+inline bool button_depressed_p(uint8_t index) { assert(index<8); return button_depressed & (1<<index); }
 
-#endif
+void buttons_task(void *parm);
+void buttons_init(uint8_t pin, uint8_t sm);
+
+#endif /* __BUTTON_H */

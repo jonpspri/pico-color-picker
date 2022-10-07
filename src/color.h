@@ -18,24 +18,21 @@
  * pico-color-picker. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef __RGB_ENCODERS_H
-#define __RGB_ENCODERS_H
+#ifndef __COLORS_H
+#define __COLORS_H
 
-#include "context.h"
+#include "menu.h"
+#include "bitmap.h"
+
+#define COLORS_COUNT 12
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* OPAQUE */
-typedef struct rgb_encoders_data rgb_encoders_data_t;
-
-bool rgb_encoders_context_init(context_t *, context_t *parent, uint32_t *rgb);
-
-/* uint32_t rgb_encoders_value(rgb_encoders_data_t *); */
-/* void rgb_encoders_ui_callback(context_t *, void *, v32_t); */
-void rgb_encoders_re_callback(void *, v32_t);
-void rgb_encoders_enable();
+menu_item_t *color_menu_items();
+void menu_render_item(menu_item_t *item, bitmap_t *item_bitmap);
+bool colors_menu_context_init(context_t *c, context_t *parent);
 
 #ifdef __cplusplus
 }
