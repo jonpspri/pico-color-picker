@@ -25,7 +25,9 @@
 
 #include "context.h"
 
-extern bool button_depressed_p(uint8_t index);
-extern void button_register_generic_callbacks(context_callback_table_t *callbacks);
+extern uint8_t button_depressed;
+static inline bool button_depressed_p(uint8_t index) { assert(index<8); return button_depressed & (1<<index); }
+
+void button_task(void *parm);
 
 #endif /* __BUTTON_H */

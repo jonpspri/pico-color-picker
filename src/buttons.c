@@ -30,25 +30,39 @@
 
 /*  So far, we're just tracking the state of the buttons */
 
-static bool button_depressed[8];
-bool button_depressed_p(uint8_t index) { return button_depressed[index]; }
+uint8_t button_depressed;
 
-static void process_button(void *button, v32_t new_state) {
-  *((bool *)button) = new_state.u?true:false;
-};
+void button_task(void *parm) {
+  context_t *context = NULL;
+  uint32_t bits = 0u;
 
-void button_register_generic_callbacks(context_callback_table_t *callbacks) {
-  /*
-   * TODO - Should the io_devices registration really be here?
-   */
-  callbacks->button_handlers[BUTTON_UPPER_OFFSET].callback=process_button;
-  callbacks->button_handlers[BUTTON_UPPER_OFFSET].data=&button_depressed[BUTTON_UPPER_OFFSET];
-  callbacks->button_handlers[BUTTON_LOWER_OFFSET].callback=process_button;
-  callbacks->button_handlers[BUTTON_LOWER_OFFSET].data=&button_depressed[BUTTON_LOWER_OFFSET];
-  callbacks->button_handlers[BUTTON_RED_OFFSET].callback=process_button;
-  callbacks->button_handlers[BUTTON_RED_OFFSET].data=&button_depressed[BUTTON_RED_OFFSET];
-  callbacks->button_handlers[BUTTON_GREEN_OFFSET].callback=process_button;
-  callbacks->button_handlers[BUTTON_GREEN_OFFSET].data=&button_depressed[BUTTON_GREEN_OFFSET];
-  callbacks->button_handlers[BUTTON_BLUE_OFFSET].callback=process_button;
-  callbacks->button_handlers[BUTTON_BLUE_OFFSET].data=&button_depressed[BUTTON_BLUE_OFFSET];
+  io_devices_register_button(BUTTON_UPPER_OFFSET);
+  io_devices_register_button(BUTTON_LOWER_OFFSET);
+  io_devices_register_button(BUTTON_RED_OFFSET);
+  io_devices_register_button(BUTTON_GREEN_OFFSET);
+  io_devices_register_button(BUTTON_BLUE_OFFSET);
+  io_devices_init_buttons(BUTTON_LOW_PIN, BUTTON_SM);
+
+  for( ;; ) {
+    /* Update the callbacks list if necessary */
+    xTaskNotifyWaitIndexed(NFCN_IDX_CONTEXT, 0u, 0u, (uint32_t *)&context, 0);
+    assert(!context || context->magic_number == CONTEXT_T);
+
+    for (int i=0; context && i<8; i++, bits >>= 2) {
+      if(!(bits & 1u)) continue;
+      if (bits & 2u) {
+        button_depressed |= 1<<i;
+      } else {
+        button_depressed &= ~(1<<i);
+      }
+      context_callback_t *c = &context->callbacks->button_handlers[i];
+      if(c->callback) c->callback(c->data, (v32_t)(bits & 2u));
+    }
+
+    if (context->callbacks->ui_update.callback) {
+      context->callbacks->ui_update.callback(context, context->callbacks->ui_update.data, (v32_t)0ul);
+    }
+
+    if (!xTaskNotifyWaitIndexed(1, 0u, 0xFFFFFFFFu, &bits, portMAX_DELAY)) continue;
+  }
 }

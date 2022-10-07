@@ -35,6 +35,7 @@
 #include "hardware/i2c.h"
 
 /* pico-color-picker includes */
+#include "buttons.h"
 #include "context.h"
 #include "colors.h"
 #include "io_devices.h"
@@ -100,36 +101,6 @@ void task_rotary_encoders(void *parm) {
   }
 }
 
-void task_buttons(void *parm) {
-  context_t *context = NULL;
-  uint32_t bits = 0u;
-
-  io_devices_register_button(BUTTON_UPPER_OFFSET);
-  io_devices_register_button(BUTTON_LOWER_OFFSET);
-  io_devices_register_button(BUTTON_RED_OFFSET);
-  io_devices_register_button(BUTTON_GREEN_OFFSET);
-  io_devices_register_button(BUTTON_BLUE_OFFSET);
-  io_devices_init_buttons(BUTTON_LOW_PIN, BUTTON_SM);
-
-  for( ;; ) {
-    /* Update the callbacks list if necessary */
-    xTaskNotifyWaitIndexed(NFCN_IDX_CONTEXT, 0u, 0u, (uint32_t *)&context, 0);
-    assert(!context || context->magic_number == CONTEXT_T);
-
-    for (int i=0; context && i<8; i++, bits >>= 2) {
-      context_callback_t *c = &context->callbacks->button_handlers[i];
-      if(!c->callback || !(bits & 1u)) continue;
-      c->callback(c->data, (v32_t)(bits & 2u));
-    }
-
-    if (context->callbacks->ui_update.callback) {
-      context->callbacks->ui_update.callback(context, context->callbacks->ui_update.data, (v32_t)0ul);
-    }
-
-    if (!xTaskNotifyWaitIndexed(1, 0u, 0xFFFFFFFFu, &bits, portMAX_DELAY)) continue;
-  }
-}
-
 int main() {
   static context_t rgb_context;  /* TEMPORARY */
   static uint32_t rgb = 0;       /* TEMPORARY */
@@ -158,7 +129,7 @@ int main() {
   xTaskCreate(task_rotary_encoders, "Rotary Encoders Task",
       configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 2, &tasks.rotary_encoders);
 
-  xTaskCreate(task_buttons, "Buttons Task",
+  xTaskCreate(button_task, "Buttons Task",
       configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 2, &tasks.buttons);
 
   xTaskCreate(context_screen_task, "Screen Task",
@@ -167,11 +138,11 @@ int main() {
   xTaskCreate(context_leds_task, "LEDs Task",
       configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, &tasks.leds);
 
-  colors_menu_context_init(&menu_context, NULL);
-  colors_menu_enable(&menu_context);
+  /* colors_menu_context_init(&menu_context, NULL); */
+  /* colors_menu_enable(&menu_context); */
 
-  /* rgb_encoders_context_init(&rgb_context, NULL, &rgb); */
-  /* rgb_encoders_enable(&rgb_context); */
+  rgb_encoders_context_init(&rgb_context, NULL, &rgb);
+  rgb_encoders_enable(&rgb_context);
 
   vTaskStartScheduler();
 

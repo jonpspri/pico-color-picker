@@ -128,8 +128,6 @@ bool rgb_encoders_context_init(context_t *context, context_t *parent, uint32_t *
   rgb_encoders->callbacks.re_handlers[ROTARY_ENCODER_BLUE_OFFSET].callback=rgb_encoders_re_callback;
   rgb_encoders->callbacks.re_handlers[ROTARY_ENCODER_BLUE_OFFSET].data=&rgb_encoders->rgb_encoders[ROTARY_ENCODER_BLUE_OFFSET];
 
-  button_register_generic_callbacks(&rgb_encoders->callbacks);
-
   rgb_encoders->callbacks.ui_update.callback=rgb_encoders_ui_callback;
   rgb_encoders->callbacks.ui_update.data=(void *)rgb_encoders;
 
