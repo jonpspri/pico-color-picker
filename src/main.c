@@ -81,7 +81,7 @@ void task_rotary_encoders(void *parm) {
   for( ;; ) {
     /* Update the context if necessary */
     xTaskNotifyWaitIndexed(NFCN_IDX_CONTEXT, 0u, 0u, (uint32_t *)(&context), context? 0 : portMAX_DELAY);
-    assert(context && context->magic_number == CONTEXT_T);
+    assert(!context || context->magic_number == CONTEXT_T);
 
     for (int i=0; context && i<4; i++, bits >>= 2) {
       context_callback_t *c = &context->callbacks->re_handlers[i];
@@ -114,7 +114,7 @@ void task_buttons(void *parm) {
   for( ;; ) {
     /* Update the callbacks list if necessary */
     xTaskNotifyWaitIndexed(NFCN_IDX_CONTEXT, 0u, 0u, (uint32_t *)&context, 0);
-    assert(context && context->magic_number == CONTEXT_T);
+    assert(!context || context->magic_number == CONTEXT_T);
 
     for (int i=0; context && i<8; i++, bits >>= 2) {
       context_callback_t *c = &context->callbacks->button_handlers[i];
@@ -167,10 +167,11 @@ int main() {
   xTaskCreate(context_leds_task, "LEDs Task",
       configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, &tasks.leds);
 
-  rgb_encoders_context_init(&rgb_context, NULL, &rgb);
-  rgb_encoders_enable(&rgb_context);
+  colors_menu_context_init(&menu_context, NULL);
+  colors_menu_enable(&menu_context);
 
-  /* colors_context_enable( colors_context_init() ); */
+  /* rgb_encoders_context_init(&rgb_context, NULL, &rgb); */
+  /* rgb_encoders_enable(&rgb_context); */
 
   vTaskStartScheduler();
 

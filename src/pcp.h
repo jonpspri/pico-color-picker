@@ -26,6 +26,10 @@
  *  @brief Pico Color Picker system-wide header file
  */
 
+#include <string.h>
+
+#include "FreeRTOS.h"
+
 /* ----------------------------------------------------------------------- */
 
 /* MAGIC NUMBERS */
@@ -45,4 +49,9 @@
 /* -- 2 has mutually exlusive for different tasks */
 #define NFCN_IDX_RGBS             2
 #define NFCN_IDX_CONTEXT          2
-#endif
+
+/* ----------------------------------------------------------------------- */
+
+static inline void *pcp_zero_malloc(size_t s) { return memset(pvPortMalloc(s),0,s); }
+
+#endif /* __PCP_H */

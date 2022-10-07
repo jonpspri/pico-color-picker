@@ -99,8 +99,7 @@ void rgb_encoders_re_callback(void *re_v, v32_t delta) {
 };
 
 bool rgb_encoders_context_init(context_t *context, context_t *parent, uint32_t *rgb) {
-  rgb_encoders_data_t *rgb_encoders=
-    memset(pvPortMalloc(sizeof(struct rgb_encoders_data)),0,sizeof(struct rgb_encoders_data));
+  rgb_encoders_data_t *rgb_encoders=pcp_zero_malloc(sizeof(struct rgb_encoders_data));
   rgb_encoders->magic_number = RGB_ENCODERS_DATA_T;
 
   rgb_encoders->rgb_encoder_mutex=xSemaphoreCreateMutex();
@@ -153,6 +152,6 @@ void rgb_encoders_enable(context_t *c) {
   assert(re->magic_number == RGB_ENCODERS_DATA_T);
 
   /* TEMPORARY - Tell the LEDs to display the single value here */
-  xTaskNotifyIndexed(tasks.leds, 2, (uint32_t)&rgb_ptrs, eSetValueWithOverwrite);
+  xTaskNotifyIndexed(tasks.leds, NFCN_IDX_RGBS, (uint32_t)&rgb_ptrs, eSetValueWithOverwrite);
   context_enable(c);
 }

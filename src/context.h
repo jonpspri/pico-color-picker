@@ -126,7 +126,7 @@ extern task_list_t tasks;
 extern bool context_init(context_t *context, context_t *parent, context_callback_table_t *callbacks, context_screen_t *screen, void *context_data);
 
 extern bool context_screen_init(context_screen_t *cs);
-extern void context_screen_set_button_char(context_screen_t *, uint8_t, uint16_t);
+static inline void context_screen_set_button_char(context_screen_t *cs, uint8_t i, uint16_t c) { cs->button_chars[i] = c; }
 
 extern void context_leds_task(void *parm);
 extern void context_screen_task(void *parm);

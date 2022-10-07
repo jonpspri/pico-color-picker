@@ -32,7 +32,7 @@ extern "C" {
 typedef struct {
   bool selectable;
   bool selected;
-  context_t *context;
+  context_t *enter_context;
   void *data;
 } menu_item_t;
 

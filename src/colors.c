@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: 2022 Jonathan Springer
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
-
+ *
  * This file is part of pico-color-picker.
  *
  * pico-color-picker is free software: you can redistribute it and/or modify it under the
@@ -32,6 +32,7 @@
 #include "bitmap.h"
 #include "context.h"
 #include "menu.h"
+#include "rgb_encoders.h"
 
 typedef struct note_color {
   const char *note_name;
@@ -61,7 +62,7 @@ static menu_item_t color_items[12];
 static note_color_t note_colors[12];
 static menu_t colors_menu;
 
-static menu_item_t *color_menu_items() {
+static menu_item_t *color_menu_items(context_t *c) {
 #ifndef NDEBUG
   /*  Validate that the initialize code is only called once */
   static bool initialize_called;
@@ -72,13 +73,15 @@ static menu_item_t *color_menu_items() {
   if (color_items_initialized) return color_items;
   memcpy(note_colors, initial_note_colors, sizeof(note_colors));
   for (uint8_t i=0; i<12; i++) {
-    color_items[i].selectable = true;
+    color_items[i].selectable = false;
     color_items[i].selected = 0;
-    color_items[i].context = NULL;
+    color_items[i].enter_context = pcp_zero_malloc(sizeof(context_t));
+    rgb_encoders_context_init(color_items[i].enter_context, c, &note_colors[i].rgb);
     color_items[i].data = &note_colors[i];
   }
   color_items_initialized = true;
 
+  rgb_ptrs.magic_number = CONTEXT_LEDS_T;
   for (uint8_t i=0; i<3; i++) rgb_ptrs.rgb_p[i] = &rgbs[i];
 
   return color_items;
@@ -104,7 +107,12 @@ bool colors_menu_context_init(context_t *c, context_t *parent) {
 
   colors_menu.menu_item_count = 12;
   colors_menu.render_item = menu_render_item;
-  colors_menu.items = color_menu_items();
+  colors_menu.items = color_menu_items(c);
 
   return menu_context_init(c, parent, &colors_menu);
+}
+
+void colors_menu_enable(context_t *c) {
+  xTaskNotifyIndexed(tasks.leds, NFCN_IDX_RGBS, (uint32_t)&rgb_ptrs, eSetValueWithOverwrite);
+  context_enable(c);
 }
