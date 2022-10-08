@@ -26,11 +26,12 @@
 #include "context.h"
 
 extern uint8_t buttons;
-extern uint8_t button_depressed;
+extern uint8_t buttons_depressed;
 
-inline bool button_depressed_p(uint8_t index) { assert(index<8); return button_depressed & (1<<index); }
+inline bool button_depressed_p(uint8_t index) { assert(index<8); return buttons_depressed & (1<<index); }
 
-void buttons_task(void *parm);
-void buttons_init(uint8_t pin, uint8_t sm);
+void button_task(void *parm);
+void button_init(uint8_t pin, uint8_t sm);
+void button_return_callback(context_t *c, void *data, v32_t value);
 
 #endif /* __BUTTON_H */

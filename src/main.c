@@ -100,7 +100,7 @@ int main() {
   xTaskCreate(rotary_encoder_task, "Rotary Encoders Task",
       configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 2, &tasks.rotary_encoders);
 
-  xTaskCreate(buttons_task, "Buttons Task",
+  xTaskCreate(button_task, "Buttons Task",
       configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 2, &tasks.buttons);
 
   xTaskCreate(context_screen_task, "Screen Task",
@@ -109,11 +109,11 @@ int main() {
   xTaskCreate(context_leds_task, "LEDs Task",
       configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, &tasks.leds);
 
-  /* colors_menu_context_init(&menu_context, NULL); */
-  /* context_enable(&menu_context); */
+  colors_menu_context_init(&menu_context, NULL);
+  context_enable(&menu_context);
 
-  rgb_encoders_context_init(&rgb_context, NULL, &rgb);
-  context_enable(&rgb_context);
+  /* rgb_encoders_context_init(&rgb_context, NULL, &rgb); */
+  /* context_enable(&rgb_context); */
 
   vTaskStartScheduler();
 

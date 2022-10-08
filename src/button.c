@@ -37,9 +37,9 @@
 /*  So far, we're just tracking the state of the buttons */
 
 uint8_t buttons;
-uint8_t button_depressed;
+uint8_t buttons_depressed;
 
-static inline void buttons_register_button(uint8_t index) { buttons |= 1<<index; }
+static inline void button_register_button(uint8_t index) { buttons |= 1<<index; }
 
 static __isr void button_irq_handler(PIO pio, uint8_t sm, TaskHandle_t task_to_signal) {
   uint32_t notify_bits = 0u;
@@ -69,16 +69,16 @@ static __isr void button_irq_handler(PIO pio, uint8_t sm, TaskHandle_t task_to_s
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
-void buttons_task(void *parm) {
+void button_task(void *parm) {
   context_t *context = NULL;
   uint32_t bits = 0u;
 
-  buttons_register_button(BUTTON_UPPER_OFFSET);
-  buttons_register_button(BUTTON_LOWER_OFFSET);
-  buttons_register_button(BUTTON_RED_OFFSET);
-  buttons_register_button(BUTTON_GREEN_OFFSET);
-  buttons_register_button(BUTTON_BLUE_OFFSET);
-  buttons_init(BUTTON_LOW_PIN, BUTTON_SM);
+  button_register_button(BUTTON_UPPER_OFFSET);
+  button_register_button(BUTTON_LOWER_OFFSET);
+  button_register_button(BUTTON_RED_OFFSET);
+  button_register_button(BUTTON_GREEN_OFFSET);
+  button_register_button(BUTTON_BLUE_OFFSET);
+  button_init(BUTTON_LOW_PIN, BUTTON_SM);
 
   for( ;; ) {
     /* Update the callbacks list if necessary */
@@ -88,9 +88,9 @@ void buttons_task(void *parm) {
     for (int i=0; context && i<8; i++, bits >>= 2) {
       if(!(bits & 1u)) continue;
       if (bits & 2u) {
-        button_depressed |= 1<<i;
+        buttons_depressed |= 1<<i;
       } else {
-        button_depressed &= ~(1<<i);
+        buttons_depressed &= ~(1<<i);
       }
       context_callback_t *c = &context->callbacks->button[i];
       if(c->callback) c->callback(context, c->data, (v32_t)(bits & 2u));
@@ -104,14 +104,11 @@ void buttons_task(void *parm) {
   }
 }
 
-void button_return_callback(void *data, v32_t value) {
-  context_t *c = (context_t *)data;
-  assert(c->magic_number == CONTEXT_T);
-
+void button_return_callback(context_t *c, void *data, v32_t value) {
   context_enable(c->parent);
 }
 
-void buttons_init(uint8_t low_pin, uint8_t sm) {
+void button_init(uint8_t low_pin, uint8_t sm) {
   log_trace("Initializing buttons on SM %d", sm);
   for(uint8_t b=0; b<8; b++) {
     if(buttons&(1<<b)) input_init_pin(low_pin + b);

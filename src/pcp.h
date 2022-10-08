@@ -40,6 +40,8 @@
 #define RGB_ENCODERS_DATA_T 0x03
 #define CONTEXT_T           0x04
 #define CONTEXT_LEDS_T      0x05
+#define MENU_ITEM_T         0x06
+#define MENU_T              0x07
 
 /* THREAD_LOCAL_STORAGE */
 #define TH_LOC_ST_CALLBACKS       0

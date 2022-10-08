@@ -30,6 +30,7 @@ extern "C" {
 #endif
 
 typedef struct {
+  uint32_t magic_number;
   bool selectable;
   bool selected;
   context_t *enter_context;
@@ -37,15 +38,15 @@ typedef struct {
 } menu_item_t;
 
 typedef struct {
-  int8_t cursor_at;
-  int8_t screen_at;
-  int8_t menu_item_count;
+  uint32_t magic_number;
+  uint8_t cursor_at;
+  uint8_t item_count;
   context_callback_table_t callbacks;
   void (*render_item)(menu_item_t *item, bitmap_t *b, uint8_t);
   menu_item_t *items;
 } menu_t;
 
-bool menu_context_init(context_t *c, context_t *parent, menu_t *menu);
+bool menu_context_init(context_t *c, context_t *parent, menu_t *menu, context_leds_t *);
 
 #ifdef __cplusplus
 }

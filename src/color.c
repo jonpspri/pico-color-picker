@@ -40,20 +40,10 @@ typedef struct note_color {
 } note_color_t;
 
 static const note_color_t initial_note_colors[12] = {
-  { "C", 0xFF0000 },
-  { "C#/Db", 0xcc1100 },
-  { "D", 0xbb2200 },
-  { "D#/Eb", 0xcc5500 },
-  { "E", 0xffcc00 },
-  { "F", 0x33ff00 },
-  { "F#/Gb", 0x00cd71 },
-  { "G", 0x008AA1 },
-  { "G#/Ab", 0x2161b0 },
-  { "A", 0x2200ff },
-  { "A#/B#", 0x860e90 },
-  { "B", 0xB8154A }
+  { "C", 0xFF0000 }, { "C#/Db", 0xcc1100 }, { "D", 0xbb2200 }, { "D#/Eb", 0xcc5500 },
+  { "E", 0xffcc00 }, { "F", 0x33ff00 }, { "F#/Gb", 0x00cd71 }, { "G", 0x008AA1 },
+  { "G#/Ab", 0x2161b0 }, { "A", 0x2200ff }, { "A#/B#", 0x860e90 }, { "B", 0xB8154A }
 };
-
 
 static uint32_t rgbs[3];
 static bool color_items_initialized;
@@ -73,6 +63,7 @@ static menu_item_t *color_menu_items(context_t *c) {
   if (color_items_initialized) return color_items;
   memcpy(note_colors, initial_note_colors, sizeof(note_colors));
   for (uint8_t i=0; i<12; i++) {
+    color_items[i].magic_number = MENU_ITEM_T;
     color_items[i].selectable = false;
     color_items[i].selected = 0;
     color_items[i].enter_context = pcp_zero_malloc(sizeof(context_t));
@@ -93,21 +84,23 @@ static void menu_render_item(menu_item_t *item, bitmap_t *item_bitmap, uint8_t o
   bitmap_clear(item_bitmap);
   sprintf(buffer, "%-5s #%06lx", nc->note_name, nc->rgb);
   bitmap_draw_string(item_bitmap, 8, 0, &TRIPLE_LINE_TEXT_FONT, buffer);
+  rgbs[offset] = nc->rgb;
+
   if(!item->selectable) return;
   if(item->selected) {
     bitmap_draw_square(item_bitmap, 0, 1, 4, 5);
   } else {
     bitmap_draw_empty_square(item_bitmap, 0, 1, 4, 5);
   }
-  rgbs[offset] = nc->rgb;
 }
 
 bool colors_menu_context_init(context_t *c, context_t *parent) {
   assert(!colors_menu.items); /* This function should be called only once */
 
-  colors_menu.menu_item_count = 12;
+  colors_menu.magic_number = MENU_T;
+  colors_menu.item_count = 12;
   colors_menu.render_item = menu_render_item;
   colors_menu.items = color_menu_items(c);
 
-  return menu_context_init(c, parent, &colors_menu);
+  return menu_context_init(c, parent, &colors_menu, &rgb_ptrs);
 }
