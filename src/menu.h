@@ -29,22 +29,26 @@
 extern "C" {
 #endif
 
-typedef struct {
+typedef struct menu_item menu_item_t;
+struct menu_item {
   uint32_t magic_number;
   bool selectable;
   bool selected;
   context_t *enter_context;
+  void (*forward_cb)(menu_item_t *item);
   void *data;
-} menu_item_t;
+};
 
-typedef struct {
+typedef struct menu menu_t;
+struct menu {
   uint32_t magic_number;
   uint8_t cursor_at;
   uint8_t item_count;
   context_callback_table_t callbacks;
-  void (*render_item)(menu_item_t *item, bitmap_t *b, uint8_t);
+  void (*selection_changed_cb)(menu_t *menu);
+  void (*render_item_cb)(menu_item_t *item, bitmap_t *b);
   menu_item_t *items;
-} menu_t;
+};
 
 bool menu_context_init(context_t *c, context_t *parent, menu_t *menu, context_leds_t *);
 

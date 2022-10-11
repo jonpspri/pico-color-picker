@@ -52,6 +52,54 @@ static menu_item_t color_items[12];
 static note_color_t note_colors[12];
 static menu_t colors_menu;
 
+/* ----------------------------------------------------------------------
+ * Callbacks
+ */
+
+static void menu_render_item_callback(menu_item_t *item, bitmap_t *item_bitmap) {
+  char buffer[25];
+  note_color_t *nc = (note_color_t *)item->data;
+  bitmap_clear(item_bitmap);
+  sprintf(buffer, "%-5s #%06lx", nc->note_name, nc->rgb);
+  bitmap_draw_string(item_bitmap, 8, 0, &TRIPLE_LINE_TEXT_FONT, buffer);
+
+  /* TO DO:  This doesn't really belong here.  There should be a separate selection changed callback. */
+  /* rgb_ptrs.rgb_p[line_number] = &nc->rgb; */
+
+  if(!item->selectable) return;
+  if(item->selected) {
+    bitmap_draw_square(item_bitmap, 0, 1, 4, 5);
+  } else {
+    bitmap_draw_empty_square(item_bitmap, 0, 1, 4, 5);
+  }
+}
+
+static void forward_render_callback(menu_item_t *item) {
+  rgb_encoders_data_t *re = (rgb_encoders_data_t *)item->enter_context->context_data;
+  assert(re->magic_number == RGB_ENCODERS_DATA_T);
+
+  menu_render_item_callback(item, &re->color_label);
+}
+
+static void selection_changed_callback(menu_t *menu) {
+  uint8_t i;
+  note_color_t *nc;
+
+  i = (menu->cursor_at + menu->item_count - 1) % menu->item_count;
+  nc = (note_color_t *)menu->items[i].data;
+  rgb_ptrs.rgb_p[0] = &nc->rgb;
+
+  i = menu->cursor_at;
+  nc = (note_color_t *)menu->items[i].data;
+  rgb_ptrs.rgb_p[1] = &nc->rgb;
+
+  i = (menu->cursor_at + 1) % menu->item_count;
+  nc = (note_color_t *)menu->items[i].data;
+  rgb_ptrs.rgb_p[2] = &nc->rgb;
+}
+
+/* ---------------------------------------------------------------------- */
+
 static menu_item_t *color_menu_items(context_t *c) {
 #ifndef NDEBUG
   /*  Validate that the initialize code is only called once */
@@ -68,6 +116,7 @@ static menu_item_t *color_menu_items(context_t *c) {
     color_items[i].selected = 0;
     color_items[i].enter_context = pcp_zero_malloc(sizeof(context_t));
     rgb_encoders_context_init(color_items[i].enter_context, c, &note_colors[i].rgb);
+    color_items[i].forward_cb = forward_render_callback;
     color_items[i].data = &note_colors[i];
   }
   color_items_initialized = true;
@@ -77,29 +126,14 @@ static menu_item_t *color_menu_items(context_t *c) {
   return color_items;
 }
 
-static void menu_render_item(menu_item_t *item, bitmap_t *item_bitmap, uint8_t offset) {
-  char buffer[25];
-  note_color_t *nc = (note_color_t *)item->data;
-  bitmap_clear(item_bitmap);
-  sprintf(buffer, "%-5s #%06lx", nc->note_name, nc->rgb);
-  log_trace("Rendering menu item %d: %s", offset, buffer);
-  bitmap_draw_string(item_bitmap, 8, 0, &TRIPLE_LINE_TEXT_FONT, buffer);
-  rgb_ptrs.rgb_p[offset] = &nc->rgb;
-
-  if(!item->selectable) return;
-  if(item->selected) {
-    bitmap_draw_square(item_bitmap, 0, 1, 4, 5);
-  } else {
-    bitmap_draw_empty_square(item_bitmap, 0, 1, 4, 5);
-  }
-}
 
 bool colors_menu_context_init(context_t *c, context_t *parent) {
   assert(!colors_menu.items); /* This function should be called only once */
 
   colors_menu.magic_number = MENU_T;
   colors_menu.item_count = 12;
-  colors_menu.render_item = menu_render_item;
+  colors_menu.render_item_cb = menu_render_item_callback;
+  colors_menu.selection_changed_cb = selection_changed_callback;
   colors_menu.items = color_menu_items(c);
 
   return menu_context_init(c, parent, &colors_menu, &rgb_ptrs);

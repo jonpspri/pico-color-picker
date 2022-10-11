@@ -40,23 +40,6 @@
 
 context_screen_t cs;
 
-typedef struct {
-  uint32_t magic_number;
-  bool active;
-  uint8_t value;
-  uint8_t shift;
-  uint8_t button_offset;
-} rgb_encoder_t;
-
-struct rgb_encoders_data {  /* typedef in rgb_encoders.h */
-  uint32_t magic_number;
-  SemaphoreHandle_t rgb_encoder_mutex;
-  uint32_t *rgb;
-  context_callback_table_t callbacks;
-  context_leds_t leds;
-  rgb_encoder_t rgb_encoders[4];  /*  We waste storage to simplify lookup.  Maybe not necessary with callbacks?  */
-}; /* rgb_encoders_data_t */
-
 /*-----------------------------------------------------------*/
 
 static uint32_t rgb_encoders_value(rgb_encoders_data_t *re) {
@@ -73,8 +56,8 @@ static uint32_t rgb_encoders_value(rgb_encoders_data_t *re) {
 static void rgb_encoders_re_callback(context_t *c, void *re_v, v32_t delta) {
   rgb_encoders_data_t *re_data = (rgb_encoders_data_t *)c->context_data;
   rgb_encoder_t *re = (rgb_encoder_t *)re_v;
-  assert(re->magic_number = RGB_ENCODER_T);
-  assert(re_data->magic_number = RGB_ENCODERS_DATA_T);
+  assert(re->magic_number == RGB_ENCODER_T);
+  assert(re_data->magic_number == RGB_ENCODERS_DATA_T);
 
   log_trace("RGB Encoder initial value %02x", re->value);
 
@@ -90,10 +73,10 @@ static void rgb_encoders_re_callback(context_t *c, void *re_v, v32_t delta) {
   log_trace("RGB Encoder new value %02x", re->value);
 };
 
-static void rgb_encoders_ui_callback(context_t *c, void *data, v32_t v) {
+static void s_display_callback(context_t *c, void *data, v32_t v) {
   static char hex_color_value[8];
 
-  log_trace("Entering rgb_encoders_ui_callback");
+  log_trace("Entering s_display_callback");
 
   rgb_encoders_data_t *re = ((rgb_encoders_data_t *) data);
   assert(re->magic_number == RGB_ENCODERS_DATA_T);
@@ -106,7 +89,8 @@ static void rgb_encoders_ui_callback(context_t *c, void *data, v32_t v) {
   sprintf(hex_color_value, "#%06lx", *re->rgb);
 
   bitmap_clear(&c->screen->pane);
-  bitmap_draw_string(&c->screen->pane, 0, 0, &SINGLE_LINE_TEXT_FONT, hex_color_value);
+  bitmap_copy_from(&c->screen->pane, &re->color_label, 0, 0);
+  bitmap_draw_string(&c->screen->pane, 0, TRIPLE_LINE_TEXT_FONT.Height, &DOUBLE_LINE_TEXT_FONT, hex_color_value);
 }
 
 /*-----------------------------------------------------------*/
@@ -141,7 +125,7 @@ bool rgb_encoders_context_init(context_t *context, context_t *parent, uint32_t *
   rgb_encoders->callbacks.re[ROTARY_ENCODER_BLUE_OFFSET].callback=rgb_encoders_re_callback;
   rgb_encoders->callbacks.re[ROTARY_ENCODER_BLUE_OFFSET].data=&rgb_encoders->rgb_encoders[ROTARY_ENCODER_BLUE_OFFSET];
 
-  rgb_encoders->callbacks.screen.callback=rgb_encoders_ui_callback;
+  rgb_encoders->callbacks.screen.callback=s_display_callback;
   rgb_encoders->callbacks.screen.data=(void *)rgb_encoders;
 
   context_screen_init(&cs);
@@ -156,6 +140,8 @@ bool rgb_encoders_context_init(context_t *context, context_t *parent, uint32_t *
 
   rgb_encoders->leds.magic_number = CONTEXT_LEDS_T;
   for (uint8_t i=0; i<WS2812_PIXEL_COUNT; i++) rgb_encoders->leds.rgb_p[i] = rgb;
+
+  bitmap_init(&rgb_encoders->color_label, RE_LABEL_TOTAL_WIDTH, TRIPLE_LINE_TEXT_FONT.Height, NULL);
 
   return context_init(context, parent, &rgb_encoders->callbacks, &cs, &rgb_encoders->leds, rgb_encoders);
 }

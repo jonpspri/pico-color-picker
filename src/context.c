@@ -30,9 +30,6 @@
 #include "ssd1306.h"
 #include "ws281x.h"
 
-#define RE_LABEL_Y_OFFSET (SCREEN_HEIGHT - RE_LABEL_FONT.Height)
-#define RE_LABEL_TOTAL_WIDTH (SCREEN_WIDTH - BUTTON_LABEL_FONT.Width)
-
 /* ---------------------------------------------------------------------- */
 
 bool context_init(context_t *context,

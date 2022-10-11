@@ -22,9 +22,12 @@
 #include "context.h"
 #include "menu.h"
 
+/* -------------------- Callbacks -------------------- */
+
 static void menu_re_callback(context_t *c, void *data, v32_t v) {
   menu_t *menu = (menu_t *) data;
   menu->cursor_at = (menu->cursor_at + menu->item_count + v.s) % menu->item_count;
+  menu->selection_changed_cb(menu);
 }
 
 static void menu_ui_callback(context_t *c, void *data, v32_t v) {
@@ -40,29 +43,34 @@ static void menu_ui_callback(context_t *c, void *data, v32_t v) {
   /*  NOTE the render_item calls should also change the LED value */
   uint8_t offset = (menu->cursor_at + menu->item_count - 1) % menu->item_count;
   bitmap_clear(&item_bitmap);
-  menu->render_item(&menu->items[offset], &item_bitmap, 0);
+  menu->render_item_cb(&menu->items[offset], &item_bitmap);
   bitmap_copy_from(&c->screen->pane, &item_bitmap, 0, 0);
 
   bitmap_clear(&item_bitmap);
   offset = (offset + 1) % menu->item_count;
-  menu->render_item(&menu->items[offset], &item_bitmap, 1);
+  menu->render_item_cb(&menu->items[offset], &item_bitmap);
   bitmap_invert(&item_bitmap);
   bitmap_copy_from(&c->screen->pane, &item_bitmap, 0, c->screen->pane.height/3);
 
   bitmap_clear(&item_bitmap);
   offset = (offset + 1) % menu->item_count;
-  menu->render_item(&menu->items[offset], &item_bitmap, 2);
+  menu->render_item_cb(&menu->items[offset], &item_bitmap);
   bitmap_copy_from(&c->screen->pane, &item_bitmap, 0, 2*c->screen->pane.height/3);
 
   xSemaphoreGive(c->screen->mutex);
 }
 
-static void button_forward(context_t* c, void *data, v32_t value) {
+static void button_forward_callback(context_t* c, void *data, v32_t value) {
   menu_t *m = (menu_t *)data;
   assert(m->magic_number == MENU_T);
 
+  menu_item_t *mi=&m->items[m->cursor_at];
+
+  if (mi->forward_cb) mi->forward_cb(mi);
   if (value.u) context_enable(m->items[m->cursor_at].enter_context);
 }
+
+/* ---------------------------------------------------------------------- */
 
 bool menu_context_init(context_t *c, context_t *parent, menu_t *menu, context_leds_t *leds) {
   c->screen = pcp_zero_malloc(sizeof(context_screen_t));
@@ -72,11 +80,13 @@ bool menu_context_init(context_t *c, context_t *parent, menu_t *menu, context_le
   menu->callbacks.re[ROTARY_ENCODER_RED_OFFSET].callback=menu_re_callback;
   menu->callbacks.re[ROTARY_ENCODER_RED_OFFSET].data=menu;
 
-  menu->callbacks.button[BUTTON_LOWER_OFFSET].callback=button_forward;
+  menu->callbacks.button[BUTTON_LOWER_OFFSET].callback=button_forward_callback;
   menu->callbacks.button[BUTTON_LOWER_OFFSET].data=menu;
 
   menu->callbacks.screen.callback=menu_ui_callback;
   menu->callbacks.screen.data=menu;
+
+  menu->selection_changed_cb(menu);
 
   return context_init(c, parent, &menu->callbacks, c->screen, leds, &menu);
 }

@@ -27,8 +27,23 @@
 extern "C" {
 #endif
 
-/* OPAQUE */
-typedef struct rgb_encoders_data rgb_encoders_data_t;
+typedef struct {
+  uint32_t magic_number;
+  bool active;
+  uint8_t value;
+  uint8_t shift;
+  uint8_t button_offset;
+} rgb_encoder_t;
+
+typedef struct rgb_encoders_data {
+  uint32_t magic_number;
+  SemaphoreHandle_t rgb_encoder_mutex;
+  uint32_t *rgb;
+  context_callback_table_t callbacks;
+  context_leds_t leds;
+  bitmap_t color_label;
+  rgb_encoder_t rgb_encoders[4];  /*  We waste storage to simplify lookup.  Maybe not necessary with callbacks?  */
+} rgb_encoders_data_t;
 
 bool rgb_encoders_context_init(context_t *, context_t *parent, uint32_t *rgb);
 

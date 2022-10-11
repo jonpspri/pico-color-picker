@@ -52,6 +52,11 @@
 
 /* ----------------------------------------------------------------------- */
 
+/* CONVENIENT FORMATTING EXPRESSIONS */
+
+#define RE_LABEL_Y_OFFSET (SCREEN_HEIGHT - RE_LABEL_FONT.Height)
+#define RE_LABEL_TOTAL_WIDTH (SCREEN_WIDTH - BUTTON_LABEL_FONT.Width)
+
 static inline void *pcp_zero_malloc(size_t s) { return memset(pvPortMalloc(s),0,s); }
 
 #endif /* __PCP_H */
