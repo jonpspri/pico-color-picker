@@ -31,6 +31,7 @@
 
 #include "pcp.h"
 #include "bitmap.h"
+#include "log.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -150,6 +151,7 @@ inline static void context_notify_display_task(context_t *c) {
 }
 
 inline static void context_enable(context_t *c) {
+  log_trace("Enabling context %lx", (uint32_t)c);
   if (tasks.rotary_encoders)
     xTaskNotifyIndexed(tasks.rotary_encoders, NTFCN_IDX_CONTEXT, (uint32_t)c, eSetValueWithOverwrite);
   if (tasks.buttons)

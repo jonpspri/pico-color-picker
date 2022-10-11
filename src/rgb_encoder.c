@@ -38,8 +38,6 @@
 
 /*  I/O RGB Encoder States -- this may evolve to an "object" */
 
-static context_leds_t rgb_ptrs;  /* Temporary? */
-
 context_screen_t cs;
 
 typedef struct {
@@ -55,6 +53,7 @@ struct rgb_encoders_data {  /* typedef in rgb_encoders.h */
   SemaphoreHandle_t rgb_encoder_mutex;
   uint32_t *rgb;
   context_callback_table_t callbacks;
+  context_leds_t leds;
   rgb_encoder_t rgb_encoders[4];  /*  We waste storage to simplify lookup.  Maybe not necessary with callbacks?  */
 }; /* rgb_encoders_data_t */
 
@@ -150,11 +149,13 @@ bool rgb_encoders_context_init(context_t *context, context_t *parent, uint32_t *
   context_screen_set_re_label(&cs, 1, "Green");
   context_screen_set_re_label(&cs, 2, "Blue");
   cs.button_chars[0] = LAQUO;
-  cs.button_chars[1] = RAQUO;
+  cs.button_chars[1] = 32;
 
-  /* TEMPORARY - eventually this will be set by a message */
-  rgb_ptrs.magic_number = CONTEXT_LEDS_T;
-  for (uint8_t i=0; i<WS2812_PIXEL_COUNT; i++) rgb_ptrs.rgb_p[i] = rgb;
+  rgb_encoders->callbacks.button[BUTTON_UPPER_OFFSET].callback=button_return_callback;
+  rgb_encoders->callbacks.button[BUTTON_LOWER_OFFSET].callback=NULL;
 
-  return context_init(context, parent, &rgb_encoders->callbacks, &cs, &rgb_ptrs, rgb_encoders);
+  rgb_encoders->leds.magic_number = CONTEXT_LEDS_T;
+  for (uint8_t i=0; i<WS2812_PIXEL_COUNT; i++) rgb_encoders->leds.rgb_p[i] = rgb;
+
+  return context_init(context, parent, &rgb_encoders->callbacks, &cs, &rgb_encoders->leds, rgb_encoders);
 }

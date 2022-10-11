@@ -61,7 +61,7 @@ static void button_forward(context_t* c, void *data, v32_t value) {
   menu_t *m = (menu_t *)data;
   assert(m->magic_number == MENU_T);
 
-  context_enable(m->items[m->cursor_at].enter_context);
+  if (value.u) context_enable(m->items[m->cursor_at].enter_context);
 }
 
 bool menu_context_init(context_t *c, context_t *parent, menu_t *menu, context_leds_t *leds) {
@@ -72,10 +72,8 @@ bool menu_context_init(context_t *c, context_t *parent, menu_t *menu, context_le
   menu->callbacks.re[ROTARY_ENCODER_RED_OFFSET].callback=menu_re_callback;
   menu->callbacks.re[ROTARY_ENCODER_RED_OFFSET].data=menu;
 
-  menu->callbacks.button[BUTTON_UPPER_OFFSET].callback=button_return_callback;
-  menu->callbacks.button[BUTTON_UPPER_OFFSET].data=menu;
-  menu->callbacks.button[BUTTON_UPPER_OFFSET].callback=button_forward;
-  menu->callbacks.button[BUTTON_UPPER_OFFSET].data=menu;
+  menu->callbacks.button[BUTTON_LOWER_OFFSET].callback=button_forward;
+  menu->callbacks.button[BUTTON_LOWER_OFFSET].data=menu;
 
   menu->callbacks.screen.callback=menu_ui_callback;
   menu->callbacks.screen.data=menu;

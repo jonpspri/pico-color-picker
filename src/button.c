@@ -70,7 +70,6 @@ static __isr void button_irq_handler(PIO pio, uint8_t sm, TaskHandle_t task_to_s
 }
 
 void button_task(void *parm) {
-  context_t *context = NULL;
   uint32_t bits = 0u;
 
   button_register_button(BUTTON_UPPER_OFFSET);
@@ -82,10 +81,11 @@ void button_task(void *parm) {
 
   for( ;; ) {
     /* Update the callbacks list if necessary */
+    context_t *context = NULL;
     xTaskNotifyWaitIndexed(NTFCN_IDX_CONTEXT, 0u, 0u, (uint32_t *)&context, 0);
     assert(!context || context->magic_number == CONTEXT_T);
 
-    for (int i=0; context && i<8; i++, bits >>= 2) {
+    for (int i=0; context && i<8 && bits; i++, bits >>= 2) {
       if(!(bits & 1u)) continue;
       if (bits & 2u) {
         buttons_depressed |= 1<<i;
@@ -105,7 +105,8 @@ void button_task(void *parm) {
 }
 
 void button_return_callback(context_t *c, void *data, v32_t value) {
-  context_enable(c->parent);
+  assert(c->parent);
+  if (value.u) context_enable(c->parent);
 }
 
 void button_init(uint8_t low_pin, uint8_t sm) {
