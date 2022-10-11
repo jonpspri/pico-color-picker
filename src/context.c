@@ -75,7 +75,7 @@ bool context_screen_init(context_screen_t *cs) {
 
 /* ---------------------------------------------------------------------- */
 
-void context_screen_task(void *parm) {
+void context_display_task(void *parm) {
   static bitmap_t screen_buffer;
   static context_t *c;
 
@@ -90,8 +90,11 @@ void context_screen_task(void *parm) {
 
     if (!xTaskNotifyWaitIndexed( NTFCN_IDX_EVENT, 0u, 0xFFFFFFFFu, (uint32_t *)(& c), portMAX_DELAY)) continue;
     assert(c->magic_number == CONTEXT_T);
-    if (!c->screen || !c->callbacks->screen.callback) continue;
+
+    if (!(c->screen && c->callbacks->screen.callback)) continue;
     c->callbacks->screen.callback(c, c->callbacks->screen.data, (v32_t)0ul);
+
+    if (c->leds) ws2812_put_pixels(c->leds->rgb_p, 3);
 
     /* If an assert fails in the xSemaphoreTake, it likely means the ContextScreen is corrupt */
     bitmap_clear(&screen_buffer);
@@ -114,16 +117,5 @@ void context_screen_task(void *parm) {
     xSemaphoreGive(c->screen->mutex);
 
     ssd1306_show((ssd1306_t *)screen_buffer.buffer);
-  }
-}
-
-void context_leds_task(void * parm) {
-  static context_t *c;
-  for( ;; ) {
-    if (!xTaskNotifyWaitIndexed( NTFCN_IDX_EVENT, 0u, 0xFFFFFFFFu, (uint32_t *)&c, portMAX_DELAY)) continue;
-    assert(c->magic_number == CONTEXT_T);
-    if (!c->leds) continue;
-
-    ws2812_put_pixels(c->leds->rgb_p, 3);
   }
 }

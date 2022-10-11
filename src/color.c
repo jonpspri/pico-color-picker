@@ -31,6 +31,7 @@
 
 #include "bitmap.h"
 #include "context.h"
+#include "log.h"
 #include "menu.h"
 #include "rgb_encoder.h"
 
@@ -45,7 +46,6 @@ static const note_color_t initial_note_colors[12] = {
   { "G#/Ab", 0x2161b0 }, { "A", 0x2200ff }, { "A#/B#", 0x860e90 }, { "B", 0xB8154A }
 };
 
-static uint32_t rgbs[3];
 static bool color_items_initialized;
 static context_leds_t rgb_ptrs;
 static menu_item_t color_items[12];
@@ -73,7 +73,6 @@ static menu_item_t *color_menu_items(context_t *c) {
   color_items_initialized = true;
 
   rgb_ptrs.magic_number = CONTEXT_LEDS_T;
-  for (uint8_t i=0; i<3; i++) rgb_ptrs.rgb_p[i] = &rgbs[i];
 
   return color_items;
 }
@@ -83,8 +82,9 @@ static void menu_render_item(menu_item_t *item, bitmap_t *item_bitmap, uint8_t o
   note_color_t *nc = (note_color_t *)item->data;
   bitmap_clear(item_bitmap);
   sprintf(buffer, "%-5s #%06lx", nc->note_name, nc->rgb);
+  log_trace("Rendering menu item %d: %s", offset, buffer);
   bitmap_draw_string(item_bitmap, 8, 0, &TRIPLE_LINE_TEXT_FONT, buffer);
-  rgbs[offset] = nc->rgb;
+  rgb_ptrs.rgb_p[offset] = &nc->rgb;
 
   if(!item->selectable) return;
   if(item->selected) {

@@ -181,7 +181,7 @@ void rotary_encoder_task(void *parm) {
     }
 
     log_trace("Rotary encoder->UI Notification");
-    context_notify_ui(context);
+    context_notify_display_task(context);
 
     if (!xTaskNotifyWaitIndexed(NTFCN_IDX_EVENT, 0u, 0xFFFFFFFFu, &bits, portMAX_DELAY)) continue;
   }

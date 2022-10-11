@@ -103,11 +103,8 @@ int main() {
   xTaskCreate(button_task, "Buttons Task",
       configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 2, &tasks.buttons);
 
-  xTaskCreate(context_screen_task, "Screen Task",
-      configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, &tasks.screen);
-
-  xTaskCreate(context_leds_task, "LEDs Task",
-      configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, &tasks.leds);
+  xTaskCreate(context_display_task, "Display Task",
+      configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, &tasks.display);
 
   colors_menu_context_init(&menu_context, NULL);
   context_enable(&menu_context);

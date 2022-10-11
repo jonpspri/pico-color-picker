@@ -117,8 +117,7 @@ struct context {
 typedef struct task_list {
   TaskHandle_t rotary_encoders;
   TaskHandle_t buttons;
-  TaskHandle_t screen;
-  TaskHandle_t leds;
+  TaskHandle_t display;
 } task_list_t;
 
 extern struct context_rgbs ws2812_rgbs;
@@ -136,7 +135,7 @@ extern bool context_screen_init(context_screen_t *cs);
 static inline void context_screen_set_button_char(context_screen_t *cs, uint8_t i, uint16_t c) { cs->button_chars[i] = c; }
 
 extern void context_leds_task(void *parm);
-extern void context_screen_task(void *parm);
+extern void context_display_task(void *parm);
 
 static inline void context_screen_set_re_label(context_screen_t *csh, uint8_t i, const char *label) {
   strncpy(csh->re_labels[i], label, 9);
@@ -146,9 +145,8 @@ static inline void context_screen_set_re_label(context_screen_t *csh, uint8_t i,
 }
 #endif
 
-inline static void context_notify_ui(context_t *c) {
-  xTaskNotifyIndexed(tasks.screen, NTFCN_IDX_EVENT, (uint32_t)c, eSetValueWithOverwrite);
-  xTaskNotifyIndexed(tasks.leds, NTFCN_IDX_EVENT, (uint32_t)c, eSetValueWithOverwrite);
+inline static void context_notify_display_task(context_t *c) {
+  xTaskNotifyIndexed(tasks.display, NTFCN_IDX_EVENT, (uint32_t)c, eSetValueWithOverwrite);
 }
 
 inline static void context_enable(context_t *c) {
@@ -156,7 +154,7 @@ inline static void context_enable(context_t *c) {
     xTaskNotifyIndexed(tasks.rotary_encoders, NTFCN_IDX_CONTEXT, (uint32_t)c, eSetValueWithOverwrite);
   if (tasks.buttons)
     xTaskNotifyIndexed(tasks.buttons, NTFCN_IDX_CONTEXT, (uint32_t)c, eSetValueWithOverwrite);
-  context_notify_ui(c);
+  context_notify_display_task(c);
 }
 
 

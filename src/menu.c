@@ -37,7 +37,7 @@ static void menu_ui_callback(context_t *c, void *data, v32_t v) {
   context_screen_set_button_char(c->screen, 0, c->parent ? LAQUO : 32);
   context_screen_set_button_char(c->screen, 1, menu->items[menu->cursor_at].enter_context ? RAQUO : 32);
 
-  /*  NOTE the render_item calls should also handle the LEDs */
+  /*  NOTE the render_item calls should also change the LED value */
   uint8_t offset = (menu->cursor_at + menu->item_count - 1) % menu->item_count;
   bitmap_clear(&item_bitmap);
   menu->render_item(&menu->items[offset], &item_bitmap, 0);
