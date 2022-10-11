@@ -1,4 +1,4 @@
-# Naming and Coding Standards
+# Pico Color Picker Standards and Practices
 
 ## Types
 
@@ -17,5 +17,11 @@
 * Callbacks should end in `_callback` and ideally be declared static.
 * Arrange callbacks together at the start of the module for ease of reference.
 
-## Other abbreviations
+## Arrays
+* Pre-allocated arrays are _plural_
+* Strive to use a compiler constant in the size definition of any array.
 
+## Cross-object access
+* If it feels icky it probably is.  Compromise on `static inline` getters and setters in 
+  a header file if you feel like you're directly accessing something you shouldn't.  Having
+  the lightweith abstraction will support later refactoring.

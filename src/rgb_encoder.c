@@ -54,7 +54,7 @@ static uint32_t rgb_encoders_value(rgb_encoders_data_t *re) {
 }
 
 static void rgb_encoders_re_callback(context_t *c, void *re_v, v32_t delta) {
-  rgb_encoders_data_t *re_data = (rgb_encoders_data_t *)c->context_data;
+  rgb_encoders_data_t *re_data = (rgb_encoders_data_t *)c->data;
   rgb_encoder_t *re = (rgb_encoder_t *)re_v;
   assert(re->magic_number == RGB_ENCODER_T);
   assert(re_data->magic_number == RGB_ENCODERS_DATA_T);
@@ -68,7 +68,7 @@ static void rgb_encoders_re_callback(context_t *c, void *re_v, v32_t delta) {
   value = MIN(value, 0xff);
   re->value = value;
 
-  *re_data->rgb = rgb_encoders_value((rgb_encoders_data_t *)c->context_data);
+  *re_data->rgb = rgb_encoders_value((rgb_encoders_data_t *)c->data);
 
   log_trace("RGB Encoder new value %02x", re->value);
 };
@@ -78,7 +78,7 @@ static void s_display_callback(context_t *c, void *data, v32_t v) {
 
   log_trace("Entering s_display_callback");
 
-  rgb_encoders_data_t *re = ((rgb_encoders_data_t *) data);
+  rgb_encoders_data_t *re = ((rgb_encoders_data_t *) c->data);
   assert(re->magic_number == RGB_ENCODERS_DATA_T);
 
   log_trace("-- UI Decoder with REs %02x %02x %02x",
@@ -88,8 +88,6 @@ static void s_display_callback(context_t *c, void *data, v32_t v) {
 
   sprintf(hex_color_value, "#%06lx", *re->rgb);
 
-  bitmap_clear(&c->screen->pane);
-  bitmap_copy_from(&c->screen->pane, &re->color_label, 0, 0);
   bitmap_draw_string(&c->screen->pane, 0, TRIPLE_LINE_TEXT_FONT.Height, &DOUBLE_LINE_TEXT_FONT, hex_color_value);
 }
 
@@ -140,8 +138,6 @@ bool rgb_encoders_context_init(context_t *context, context_t *parent, uint32_t *
 
   rgb_encoders->leds.magic_number = CONTEXT_LEDS_T;
   for (uint8_t i=0; i<WS2812_PIXEL_COUNT; i++) rgb_encoders->leds.rgb_p[i] = rgb;
-
-  bitmap_init(&rgb_encoders->color_label, RE_LABEL_TOTAL_WIDTH, TRIPLE_LINE_TEXT_FONT.Height, NULL);
 
   return context_init(context, parent, &rgb_encoders->callbacks, &cs, &rgb_encoders->leds, rgb_encoders);
 }

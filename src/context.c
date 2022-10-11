@@ -37,15 +37,15 @@ bool context_init(context_t *context,
   context_callback_table_t *callbacks,
   context_screen_t *screen,
   context_leds_t *leds,
-  void *context_data
+  void *data
 ) {
-  if (context->context_data) return false;
+  if (context->data) return false;
   context->magic_number = CONTEXT_T;
   context->callbacks = callbacks;
   context->parent = parent;
   context->screen = screen;
   context->leds = leds;
-  context->context_data = context_data;
+  context->data = data;
   return true;
 }
 
@@ -80,6 +80,7 @@ void context_display_task(void *parm) {
   vTaskDelay(400 / portTICK_PERIOD_MS);
 
   bitmap_init(&screen_buffer, SCREEN_WIDTH, SCREEN_HEIGHT, b_ssd1306_init);
+
   bitmap_clear(&screen_buffer);
   ssd1306_show((ssd1306_t *)screen_buffer.buffer);
 
@@ -89,6 +90,10 @@ void context_display_task(void *parm) {
     assert(c->magic_number == CONTEXT_T);
 
     if (!(c->screen && c->callbacks->screen.callback)) continue;
+    bitmap_clear(&c->screen->pane);
+    if (c->callbacks->line1.callback) {
+      c->callbacks->line1.callback(c, c->callbacks->line1.data, (v32_t)0ul);
+    }
     c->callbacks->screen.callback(c, c->callbacks->screen.data, (v32_t)0ul);
 
     if (c->leds) ws2812_put_pixels(c->leds->rgb_p, 3);

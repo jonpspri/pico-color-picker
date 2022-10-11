@@ -41,8 +41,7 @@ typedef struct rgb_encoders_data {
   uint32_t *rgb;
   context_callback_table_t callbacks;
   context_leds_t leds;
-  bitmap_t color_label;
-  rgb_encoder_t rgb_encoders[4];  /*  We waste storage to simplify lookup.  Maybe not necessary with callbacks?  */
+  rgb_encoder_t rgb_encoders[IO_PIO_SLOTS/2];  /*  We waste storage to simplify lookup.  Maybe not necessary with callbacks?  */
 } rgb_encoders_data_t;
 
 bool rgb_encoders_context_init(context_t *, context_t *parent, uint32_t *rgb);

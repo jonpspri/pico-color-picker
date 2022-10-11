@@ -75,21 +75,16 @@ typedef struct {
 } context_callback_t;
 
 typedef struct {
-  void (*callback)(context_t *c, void *, v32_t);
-  void *data;
-} context_ui_callback_t;
-
-typedef struct {
   context_callback_t button[IO_PIO_SLOTS];
   context_callback_t re[IO_PIO_SLOTS/2];
   context_callback_t screen;
   context_callback_t led;
+  context_callback_t line1;
 } context_callback_table_t;
 
 typedef struct context_screen {
   uint32_t magic_number;
   SemaphoreHandle_t mutex;
-  /* TODO: "Dynamically" calculate max-width and allocate */
   char re_labels[ROTARY_ENCODER_COUNT][9];
   uint16_t button_chars[BUTTON_COUNT];
   bitmap_t pane;
@@ -112,7 +107,7 @@ struct context {
   context_t *parent;
   context_screen_t *screen;
   context_leds_t *leds;
-  void *context_data;
+  void *data;
 };
 
 typedef struct task_list {

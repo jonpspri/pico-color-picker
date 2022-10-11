@@ -74,11 +74,14 @@ static void menu_render_item_callback(menu_item_t *item, bitmap_t *item_bitmap) 
   }
 }
 
-static void forward_render_callback(menu_item_t *item) {
-  rgb_encoders_data_t *re = (rgb_encoders_data_t *)item->enter_context->context_data;
+static void s_line1_render_callback(context_t *c, void *data, v32_t v) {
+  menu_item_t *item = (menu_item_t *)data;
+  assert(item->magic_number == MENU_ITEM_T);
+
+  rgb_encoders_data_t *re = (rgb_encoders_data_t *)item->enter_context->data;
   assert(re->magic_number == RGB_ENCODERS_DATA_T);
 
-  menu_render_item_callback(item, &re->color_label);
+  menu_render_item_callback(item, &c->screen->pane);
 }
 
 static void selection_changed_callback(menu_t *menu) {
@@ -116,7 +119,8 @@ static menu_item_t *color_menu_items(context_t *c) {
     color_items[i].selected = 0;
     color_items[i].enter_context = pcp_zero_malloc(sizeof(context_t));
     rgb_encoders_context_init(color_items[i].enter_context, c, &note_colors[i].rgb);
-    color_items[i].forward_cb = forward_render_callback;
+    color_items[i].enter_context->callbacks->line1.callback=s_line1_render_callback;
+    color_items[i].enter_context->callbacks->line1.data=&color_items[i];
     color_items[i].data = &note_colors[i];
   }
   color_items_initialized = true;
