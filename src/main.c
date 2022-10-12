@@ -36,6 +36,7 @@
 
 /* pico-color-picker includes */
 #include "button.h"
+#include "color_menu.h"
 #include "context.h"
 #include "input.h"
 #include "log.h"
@@ -106,9 +107,9 @@ int main() {
   xTaskCreate(context_display_task, "Display Task",
       configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, &tasks.display);
 
-  colors_menu_init(&menu_context);
+  color_menu_init(&menu_context);
 
-  context_enable(&menu_context);
+  context_push(&menu_context);
 
   vTaskStartScheduler();
 

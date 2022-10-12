@@ -105,8 +105,8 @@ void button_task(void *parm) {
 }
 
 void button_return_callback(context_t *c, void *data, v32_t value) {
-  assert(c->parent);
-  if (value.u) context_enable(c->parent);
+  /* Only do something on button-down */
+  if (value.u) context_pop();
 }
 
 void button_init(uint8_t low_pin, uint8_t sm) {

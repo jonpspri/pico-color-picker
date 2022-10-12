@@ -47,6 +47,7 @@ static inline void s_update_leds() {
 /* ---------------------------------------------------------------------- */
 
 static void s_line1_callback(context_t *c, void *data, v32_t v) {
+
 }
 
 static void s_display_callback(context_t *c, void *data, v32_t v) {
@@ -131,5 +132,5 @@ void chord_init(context_t *c, context_t *parent) {
   /*
    *  Step 6 - Initialize the underlying context
    */
-  context_init(c, parent, &chord.callbacks, c->screen, &rgb_ptrs, &chord);
+  context_init(c, &chord.callbacks, c->screen, &rgb_ptrs, &chord);
 }

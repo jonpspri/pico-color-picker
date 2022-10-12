@@ -33,11 +33,12 @@ static void menu_re_callback(context_t *c, void *data, v32_t v) {
 static void menu_ui_callback(context_t *c, void *data, v32_t v) {
   static bitmap_t item_bitmap;
   menu_t *menu = (menu_t *) data;
+  ASSERT_IS_A(menu, MENU_T);
 
   bitmap_init(&item_bitmap, c->screen->pane.width, c->screen->pane.height/3, NULL);
 
   xSemaphoreTake(c->screen->mutex, portMAX_DELAY);
-  context_screen_set_button_char(c->screen, 0, c->parent ? LAQUO : 32);
+  context_screen_set_button_char(c->screen, 0, (context_stack_depth() > 1) ? LAQUO : 32);
   context_screen_set_button_char(c->screen, 1, menu->items[menu->cursor_at].enter_context ? RAQUO : 32);
 
   /*  NOTE the render_item calls should also change the LED value */
@@ -62,17 +63,17 @@ static void menu_ui_callback(context_t *c, void *data, v32_t v) {
 
 static void button_forward_callback(context_t* c, void *data, v32_t value) {
   menu_t *m = (menu_t *)data;
-  assert(m->magic_number == MENU_T);
+  ASSERT_IS_A(m, MENU_T);
 
   menu_item_t *mi=&m->items[m->cursor_at];
 
   if (mi->forward_cb) mi->forward_cb(mi);
-  if (value.u) context_enable(m->items[m->cursor_at].enter_context);
+  if (value.u) context_push(m->items[m->cursor_at].enter_context);
 }
 
 /* ---------------------------------------------------------------------- */
 
-void menu_init(context_t *c, context_t *parent, menu_t *menu, context_leds_t *leds) {
+void menu_init(context_t *c, menu_t *menu, context_leds_t *leds) {
   c->screen = pcp_zero_malloc(sizeof(context_screen_t));
   context_screen_init(c->screen);
   context_screen_set_re_label(c->screen, 0, "Up/Down");
@@ -88,5 +89,5 @@ void menu_init(context_t *c, context_t *parent, menu_t *menu, context_leds_t *le
 
   menu->selection_changed_cb(menu);
 
-  context_init(c, parent, &menu->callbacks, c->screen, leds, &menu);
+  context_init(c, &menu->callbacks, c->screen, leds, &menu);
 }

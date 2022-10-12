@@ -31,21 +31,24 @@
 #include "pcp.h"
 #include "log.h"
 
+#include "context.h"
 #include "note_color.h"
 
 struct note_color {
   uint32_t magic_number;
   const char *note_name;
   uint32_t rgb;
+  context_t rgb_encoder;
 };
 
-static const note_color_t initial_note_colors[12] = {
-  { NOTE_COLOR_T, "C", 0xFF0000 },     { NOTE_COLOR_T, "C#/Db", 0xcc1100 },
-  { NOTE_COLOR_T, "D", 0xbb2200 },     { NOTE_COLOR_T, "D#/Eb", 0xcc5500 },
-  { NOTE_COLOR_T, "E", 0xffcc00 },     { NOTE_COLOR_T, "F", 0x33ff00 },
-  { NOTE_COLOR_T, "F#/Gb", 0x00cd71 }, { NOTE_COLOR_T, "G", 0x008AA1 },
-  { NOTE_COLOR_T, "G#/Ab", 0x2161b0 }, { NOTE_COLOR_T, "A", 0x2200ff },
-  { NOTE_COLOR_T, "A#/B#", 0x860e90 }, { NOTE_COLOR_T, "B", 0xB8154A }
+static const char *initial_names[12] = {
+  "C", "C#/Db", "D", "D#/Eb", "E", "F",
+  "F#/Gb", "G", "G#/Ab", "A", "A#/B#", "B"
+};
+
+static uint32_t initial_rgbs[12] = {
+0xFF0000 , 0xcc1100 , 0xbb2200 , 0xcc5500 , 0xffcc00 , 0x33ff00 ,
+0x00cd71 , 0x008AA1 , 0x2161b0 , 0x2200ff , 0x860e90 , 0xB8154A
 };
 
 static note_color_t note_colors[12];
@@ -79,5 +82,9 @@ note_color_t *note_color_ptr_i(uint8_t i) {
 }
 
 void note_color_init() {
-  memcpy(note_colors, initial_note_colors, sizeof(note_colors));
+  for(uint8_t i=0; i<12; i++) {
+    note_colors[i].magic_number = NOTE_COLOR_T;
+    note_colors[i].note_name = initial_names[i];
+    note_colors[i].rgb = initial_rgbs[i];
+  }
 }

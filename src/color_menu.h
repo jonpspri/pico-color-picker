@@ -25,12 +25,12 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif /* __cplusplus */
 
-void menu_render_item(menu_item_t *item, bitmap_t *item_bitmap);
-void colors_menu_init(context_t *c, context_t *parent);
+void color_menu_init(context_t *c);
 
 #ifdef __cplusplus
 }
-#endif
-#endif
+#endif /* __cplusplus */
+
+#endif /* __COLOR_MENU_H */

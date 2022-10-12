@@ -27,24 +27,7 @@
 extern "C" {
 #endif
 
-typedef struct {
-  uint32_t magic_number;
-  bool active;
-  uint8_t value;
-  uint8_t shift;
-  uint8_t button_offset;
-} rgb_encoder_t;
-
-typedef struct rgb_encoders_data {
-  uint32_t magic_number;
-  SemaphoreHandle_t rgb_encoder_mutex;
-  uint32_t *rgb;
-  context_callback_table_t callbacks;
-  context_leds_t leds;
-  rgb_encoder_t rgb_encoders[IO_PIO_SLOTS/2];  /*  We waste storage to simplify lookup.  Maybe not necessary with callbacks?  */
-} rgb_encoders_data_t;
-
-bool rgb_encoder_init(context_t *, context_t *parent, uint32_t *rgb);
+void rgb_encoder_init(context_t *c, uint32_t *rgb);
 
 #ifdef __cplusplus
 }

@@ -24,16 +24,31 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "FreeRTOS.h"
+#include "queue.h"
+
 #include "pcp.h"
 #include "context.h"
 #include "log.h"
 #include "ssd1306.h"
 #include "ws281x.h"
 
+static QueueHandle_t context_stack;
+
+/* ---------------------------------------------------------------------- */
+
+inline static void context_enable(context_t *c) {
+  log_trace("Enabling context %lx", (uint32_t)c);
+  if (tasks.rotary_encoders)
+    xTaskNotifyIndexed(tasks.rotary_encoders, NTFCN_IDX_CONTEXT, (uint32_t)c, eSetValueWithOverwrite);
+  if (tasks.buttons)
+    xTaskNotifyIndexed(tasks.buttons, NTFCN_IDX_CONTEXT, (uint32_t)c, eSetValueWithOverwrite);
+  context_notify_display_task(c);
+}
+
 /* ---------------------------------------------------------------------- */
 
 bool context_init(context_t *context,
-  context_t *parent,
   context_callback_table_t *callbacks,
   context_screen_t *screen,
   context_leds_t *leds,
@@ -42,7 +57,6 @@ bool context_init(context_t *context,
   if (context->data) return false;
   context->magic_number = CONTEXT_T;
   context->callbacks = callbacks;
-  context->parent = parent;
   context->screen = screen;
   context->leds = leds;
   context->data = data;
@@ -120,4 +134,30 @@ void context_display_task(void *parm) {
 
     ssd1306_show((ssd1306_t *)screen_buffer.buffer);
   }
+}
+
+void context_push(context_t *c) {
+  if (!context_stack) context_stack = xQueueCreate(10, sizeof(context_t *));
+  BaseType_t success = xQueueSendToFront(context_stack, &c, 0);
+  assert(success == pdTRUE);
+  context_enable(c);
+}
+
+context_t *context_current() {
+  context_t *c;
+  BaseType_t success = xQueuePeek(context_stack, &c, 0);
+  assert(success == pdTRUE);
+  return c;
+}
+
+context_t *context_pop() {
+  context_t *leaving;
+  BaseType_t success = xQueueReceive(context_stack, &leaving, 0);
+  assert(success == pdTRUE);
+  context_enable(context_current());
+  return leaving;
+}
+
+uint32_t context_stack_depth() {
+  return uxQueueMessagesWaiting(context_stack);
 }

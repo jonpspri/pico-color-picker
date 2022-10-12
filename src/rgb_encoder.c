@@ -34,6 +34,23 @@
 #include "log.h"
 #include "rgb_encoder.h"
 
+typedef struct {
+  uint32_t magic_number;
+  bool active;
+  uint8_t value;
+  uint8_t shift;
+  uint8_t button_offset;
+} rgb_encoder_t;
+
+typedef struct rgb_encoders_data {
+  uint32_t magic_number;
+  SemaphoreHandle_t rgb_encoder_mutex;
+  uint32_t *rgb;
+  context_callback_table_t callbacks;
+  context_leds_t leds;
+  rgb_encoder_t rgb_encoders[IO_PIO_SLOTS/2];  /*  We waste storage to simplify lookup.  Maybe not necessary with callbacks?  */
+} rgb_encoders_data_t;
+
 /*-----------------------------------------------------------*/
 
 /*  I/O RGB Encoder States -- this may evolve to an "object" */
@@ -93,7 +110,7 @@ static void s_display_callback(context_t *c, void *data, v32_t v) {
 
 /*-----------------------------------------------------------*/
 
-bool rgb_encoder_init(context_t *context, context_t *parent, uint32_t *rgb) {
+void rgb_encoder_init(context_t *context, uint32_t *rgb) {
   rgb_encoders_data_t *rgb_encoders=pcp_zero_malloc(sizeof(struct rgb_encoders_data));
   rgb_encoders->magic_number = RGB_ENCODERS_DATA_T;
 
@@ -139,5 +156,5 @@ bool rgb_encoder_init(context_t *context, context_t *parent, uint32_t *rgb) {
   rgb_encoders->leds.magic_number = CONTEXT_LEDS_T;
   for (uint8_t i=0; i<WS2812_PIXEL_COUNT; i++) rgb_encoders->leds.rgb_p[i] = rgb;
 
-  return context_init(context, parent, &rgb_encoders->callbacks, &cs, &rgb_encoders->leds, rgb_encoders);
+  context_init(context, &rgb_encoders->callbacks, &cs, &rgb_encoders->leds, rgb_encoders);
 }

@@ -59,9 +59,6 @@ static void s_line1_render_callback(context_t *c, void *data, v32_t v) {
   menu_item_t *item = (menu_item_t *)data;
   ASSERT_IS_A(item, MENU_ITEM_T);
 
-  rgb_encoders_data_t *re = (rgb_encoders_data_t *)item->enter_context->data;
-  assert(re->magic_number == RGB_ENCODERS_DATA_T);
-
   menu_render_item_callback(item, &c->screen->pane);
 }
 
@@ -86,7 +83,7 @@ static menu_item_t *color_menu_items(context_t *c) {
     color_items[i].selectable = false;
     color_items[i].selected = 0;
     color_items[i].enter_context = pcp_zero_malloc(sizeof(context_t));
-    rgb_encoder_init(color_items[i].enter_context, c, note_color_rgb_i(i));
+    rgb_encoder_init(color_items[i].enter_context, note_color_rgb_i(i));
     color_items[i].enter_context->callbacks->line1.callback=s_line1_render_callback;
     color_items[i].enter_context->callbacks->line1.data=&color_items[i];
     color_items[i].data = note_color_ptr_i(i);
@@ -95,7 +92,7 @@ static menu_item_t *color_menu_items(context_t *c) {
   return color_items;
 }
 
-void colors_menu_init(context_t *c, context_t *parent) {
+void color_menu_init(context_t *c) {
   assert(!colors_menu.items); /* This function should be called only once */
 
   colors_menu.magic_number = MENU_T;
@@ -104,5 +101,5 @@ void colors_menu_init(context_t *c, context_t *parent) {
   colors_menu.selection_changed_cb = selection_changed_callback;
   colors_menu.items = color_menu_items(c);
 
-  menu_init(c, parent, &colors_menu, &rgb_ptrs);
+  menu_init(c, &colors_menu, &rgb_ptrs);
 }

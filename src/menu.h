@@ -50,7 +50,7 @@ struct menu {
   menu_item_t *items;
 };
 
-void menu_init(context_t *c, context_t *parent, menu_t *menu, context_leds_t *);
+void menu_init(context_t *c, menu_t *menu, context_leds_t *);
 
 #ifdef __cplusplus
 }
