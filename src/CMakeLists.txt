@@ -95,12 +95,14 @@ add_executable(pico_color_picker
   bitmap.c
   bitmap_ssd1306.c
   button.c
-  color.c
+  chord.c
+  color_menu.c
   context.c
   input.c
   log.c
   main.c
   menu.c
+  note_color.c
   rgb_encoder.c
   rotary_encoder.c
   ssd1306.c
@@ -108,6 +110,9 @@ add_executable(pico_color_picker
 
   ${FONT_SOURCES}
 )
+target_compile_options(pico_color_picker PRIVATE
+  "$<$<CONFIG:DEBUG>:-Wunused>"
+  )
 
 pico_generate_pio_header(pico_color_picker
   ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)

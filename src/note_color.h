@@ -18,39 +18,28 @@
  * pico-color-picker. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef __MENU_H
-#define __MENU_H
+/** @file note_color.h
+ */
 
 #include "pico/stdlib.h"
 
-#include "context.h"
+#ifndef __NOTE_COLOR_H
+#define __NOTE_COLOR_H
+
+#define COLORS_COUNT 12
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct menu_item menu_item_t;
-struct menu_item {
-  uint32_t magic_number;
-  bool selectable;
-  bool selected;
-  context_t *enter_context;
-  void (*forward_cb)(menu_item_t *item);
-  void *data;
-};
+typedef struct note_color note_color_t;
 
-typedef struct menu menu_t;
-struct menu {
-  uint32_t magic_number;
-  uint8_t cursor_at;
-  uint8_t item_count;
-  context_callback_table_t callbacks;
-  void (*selection_changed_cb)(menu_t *menu);
-  void (*render_item_cb)(menu_item_t *item, bitmap_t *b);
-  menu_item_t *items;
-};
-
-void menu_init(context_t *c, context_t *parent, menu_t *menu, context_leds_t *);
+const char *note_color_note_name_i(uint8_t i);
+const char *note_color_note_name(note_color_t *n);
+uint32_t *note_color_rgb_i(uint8_t i);
+uint32_t *note_color_rgb(note_color_t *n);
+note_color_t *note_color_ptr_i(uint8_t i);
+void note_color_init();
 
 #ifdef __cplusplus
 }

@@ -18,24 +18,19 @@
  * pico-color-picker. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef __COLORS_H
-#define __COLORS_H
+#ifndef __COLOR_MENU_H
+#define __COLOR_MENU_H
 
 #include "menu.h"
-#include "bitmap.h"
-
-#define COLORS_COUNT 12
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-menu_item_t *color_menu_items();
 void menu_render_item(menu_item_t *item, bitmap_t *item_bitmap);
-bool colors_menu_context_init(context_t *c, context_t *parent);
+void colors_menu_init(context_t *c, context_t *parent);
 
 #ifdef __cplusplus
 }
 #endif
-
 #endif

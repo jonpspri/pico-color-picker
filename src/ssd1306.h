@@ -151,26 +151,6 @@ void ssd1306_clear(ssd1306_t *p);
 */
 void ssd1306_draw_pixel(ssd1306_t *p, uint32_t x, uint32_t y, bool value);
 
-/**
-    @brief draw monochrome bitmap with offset
-
-    @param[in] p : instance of display
-    @param[in] data : image data (whole file)
-    @param[in] size : size of image data in bytes
-    @param[in] x_offset : offset of horizontal coordinate
-    @param[in] y_offset : offset of vertical coordinate
-*/
-void ssd1306_bmp_show_image_with_offset(ssd1306_t *p, const uint8_t *data, const long size, uint32_t x_offset, uint32_t y_offset);
-
-/**
-    @brief draw monochrome bitmap
-
-    @param[in] p : instance of display
-    @param[in] data : image data (whole file)
-    @param[in] size : size of image data in bytes
-*/
-void ssd1306_bmp_show_image(ssd1306_t *p, const uint8_t *data, const long size);
-
 bool ssd1306_pixel_value(ssd1306_t *p, uint32_t x, uint32_t y);
 
 void b_ssd1306_init(bitmap_t *b);

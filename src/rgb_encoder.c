@@ -38,7 +38,7 @@
 
 /*  I/O RGB Encoder States -- this may evolve to an "object" */
 
-context_screen_t cs;
+static context_screen_t cs;
 
 /*-----------------------------------------------------------*/
 
@@ -93,7 +93,7 @@ static void s_display_callback(context_t *c, void *data, v32_t v) {
 
 /*-----------------------------------------------------------*/
 
-bool rgb_encoders_context_init(context_t *context, context_t *parent, uint32_t *rgb) {
+bool rgb_encoder_init(context_t *context, context_t *parent, uint32_t *rgb) {
   rgb_encoders_data_t *rgb_encoders=pcp_zero_malloc(sizeof(struct rgb_encoders_data));
   rgb_encoders->magic_number = RGB_ENCODERS_DATA_T;
 
@@ -123,6 +123,8 @@ bool rgb_encoders_context_init(context_t *context, context_t *parent, uint32_t *
   rgb_encoders->callbacks.re[ROTARY_ENCODER_BLUE_OFFSET].callback=rgb_encoders_re_callback;
   rgb_encoders->callbacks.re[ROTARY_ENCODER_BLUE_OFFSET].data=&rgb_encoders->rgb_encoders[ROTARY_ENCODER_BLUE_OFFSET];
 
+  rgb_encoders->callbacks.button[BUTTON_UPPER_OFFSET].callback=button_return_callback;
+
   rgb_encoders->callbacks.screen.callback=s_display_callback;
   rgb_encoders->callbacks.screen.data=(void *)rgb_encoders;
 
@@ -133,8 +135,6 @@ bool rgb_encoders_context_init(context_t *context, context_t *parent, uint32_t *
   cs.button_chars[0] = LAQUO;
   cs.button_chars[1] = 32;
 
-  rgb_encoders->callbacks.button[BUTTON_UPPER_OFFSET].callback=button_return_callback;
-  rgb_encoders->callbacks.button[BUTTON_LOWER_OFFSET].callback=NULL;
 
   rgb_encoders->leds.magic_number = CONTEXT_LEDS_T;
   for (uint8_t i=0; i<WS2812_PIXEL_COUNT; i++) rgb_encoders->leds.rgb_p[i] = rgb;

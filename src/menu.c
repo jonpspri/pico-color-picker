@@ -72,7 +72,7 @@ static void button_forward_callback(context_t* c, void *data, v32_t value) {
 
 /* ---------------------------------------------------------------------- */
 
-bool menu_context_init(context_t *c, context_t *parent, menu_t *menu, context_leds_t *leds) {
+void menu_init(context_t *c, context_t *parent, menu_t *menu, context_leds_t *leds) {
   c->screen = pcp_zero_malloc(sizeof(context_screen_t));
   context_screen_init(c->screen);
   context_screen_set_re_label(c->screen, 0, "Up/Down");
@@ -88,5 +88,5 @@ bool menu_context_init(context_t *c, context_t *parent, menu_t *menu, context_le
 
   menu->selection_changed_cb(menu);
 
-  return context_init(c, parent, &menu->callbacks, c->screen, leds, &menu);
+  context_init(c, parent, &menu->callbacks, c->screen, leds, &menu);
 }

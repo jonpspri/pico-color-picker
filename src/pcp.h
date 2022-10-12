@@ -30,11 +30,15 @@
 
 #include "FreeRTOS.h"
 
+#include "bitmap.h"
+
 /* ----------------------------------------------------------------------- */
 
 /* MAGIC NUMBERS */
 
-#define UINITIALIZED        0x00
+#define ASSERT_IS_A(x, y) assert(*((uint32_t *)(x)) == (y));
+
+#define UNINITIALIZED       0x00
 #define CONTEXT_SCREEN_T    0x01
 #define RGB_ENCODER_T       0x02
 #define RGB_ENCODERS_DATA_T 0x03
@@ -42,6 +46,8 @@
 #define CONTEXT_LEDS_T      0x05
 #define MENU_ITEM_T         0x06
 #define MENU_T              0x07
+#define CHORD_T             0x08
+#define NOTE_COLOR_T        0x09
 
 /* THREAD_LOCAL_STORAGE */
 #define TH_LOC_ST_CALLBACKS       0
@@ -56,6 +62,10 @@
 
 #define RE_LABEL_Y_OFFSET (SCREEN_HEIGHT - RE_LABEL_FONT.Height)
 #define RE_LABEL_TOTAL_WIDTH (SCREEN_WIDTH - BUTTON_LABEL_FONT.Width)
+
+static inline void pcp_one_line_bitmap(bitmap_t *b) {
+  bitmap_init(b, RE_LABEL_TOTAL_WIDTH, TRIPLE_LINE_TEXT_FONT.Height, NULL);
+}
 
 static inline void *pcp_zero_malloc(size_t s) { return memset(pvPortMalloc(s),0,s); }
 

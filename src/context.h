@@ -78,7 +78,7 @@ typedef struct {
   context_callback_t button[IO_PIO_SLOTS];
   context_callback_t re[IO_PIO_SLOTS/2];
   context_callback_t screen;
-  context_callback_t led;
+  /*context_callback_t led;*/
   context_callback_t line1;
 } context_callback_table_t;
 

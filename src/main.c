@@ -37,9 +37,9 @@
 /* pico-color-picker includes */
 #include "button.h"
 #include "context.h"
-#include "color.h"
 #include "input.h"
 #include "log.h"
+#include "note_color.h"
 #include "rgb_encoder.h"
 #include "rotary_encoder.h"
 #include "ws281x.h"
@@ -71,8 +71,6 @@ void log_lock(bool acq, void *data) {
 
 task_list_t tasks;
 int main() {
-  static context_t rgb_context;  /* TEMPORARY */
-  static uint32_t rgb = 0;       /* TEMPORARY */
   static context_t menu_context; /* TEMPORARY */
 
   stdio_init_all();
@@ -94,6 +92,8 @@ int main() {
   gpio_pull_up(SCREEN_SDA_PIN);
   gpio_pull_up(SCREEN_SCL_PIN);
 
+  note_color_init();
+
   /*
    * Start the tasks
    */
@@ -106,11 +106,9 @@ int main() {
   xTaskCreate(context_display_task, "Display Task",
       configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, &tasks.display);
 
-  colors_menu_context_init(&menu_context, NULL);
-  context_enable(&menu_context);
+  colors_menu_init(&menu_context);
 
-  /* rgb_encoders_context_init(&rgb_context, NULL, &rgb); */
-  /* context_enable(&rgb_context); */
+  context_enable(&menu_context);
 
   vTaskStartScheduler();
 
