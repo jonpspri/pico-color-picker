@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: 2022 Jonathan Springer
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
-
+ *
  * This file is part of pico-color-picker.
  *
  * pico-color-picker is free software: you can redistribute it and/or modify it under the
@@ -71,6 +71,7 @@ static __isr void button_irq_handler(PIO pio, uint8_t sm, TaskHandle_t task_to_s
 
 void button_task(void *parm) {
   uint32_t bits = 0u;
+  context_t *context = NULL;
 
   button_register_button(BUTTON_UPPER_OFFSET);
   button_register_button(BUTTON_LOWER_OFFSET);
@@ -81,9 +82,13 @@ void button_task(void *parm) {
 
   for( ;; ) {
     /* Update the callbacks list if necessary */
-    context_t *context = NULL;
-    xTaskNotifyWaitIndexed(NTFCN_IDX_CONTEXT, 0u, 0u, (uint32_t *)&context, 0);
-    assert(!context || context->magic_number == CONTEXT_T);
+    do {
+      log_trace("Button checking context inbox.  Currently %lx", context);
+      xTaskNotifyWaitIndexed(NTFCN_IDX_CONTEXT, 0u, 0u, (uint32_t *)&context, context? 0 : portMAX_DELAY);
+      log_trace("Button context set to: %lx", context);
+    } while(!context);
+
+    ASSERT_IS_A(context, CONTEXT_T);
 
     for (int i=0; context && i<8 && bits; i++, bits >>= 2) {
       if(!(bits & 1u)) continue;
@@ -100,7 +105,8 @@ void button_task(void *parm) {
       context->callbacks->screen.callback(context, context->callbacks->screen.data, (v32_t)0ul);
     }
 
-    if (!xTaskNotifyWaitIndexed(1, 0u, 0xFFFFFFFFu, &bits, portMAX_DELAY)) continue;
+    while (!xTaskNotifyWaitIndexed(1, 0u, 0xFFFFFFFFu, &bits, portMAX_DELAY));
+    log_trace("Button event received: %lx", bits);
   }
 }
 

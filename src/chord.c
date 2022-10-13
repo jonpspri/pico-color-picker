@@ -132,5 +132,5 @@ void chord_init(context_t *c, context_t *parent) {
   /*
    *  Step 6 - Initialize the underlying context
    */
-  context_init(c, &chord.callbacks, c->screen, &rgb_ptrs, &chord);
+  context_init(c, &chord.callbacks, c->screen, &chord);
 }

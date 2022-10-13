@@ -18,9 +18,8 @@
  * pico-color-picker. If not, see <https://www.gnu.org/licenses/>.
  */
 
-/** @file context.c
- *
- */
+/** @file context.c */
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -33,12 +32,23 @@
 #include "ssd1306.h"
 #include "ws281x.h"
 
+/* ---------------------------------------------------------------------- */
+
+typedef struct context_frame {
+  context_t *context;
+  void *data;
+} context_frame_t;
+
+/* ---------------------------------------------------------------------- */
+
 static QueueHandle_t context_stack;
 
 /* ---------------------------------------------------------------------- */
 
-inline static void context_enable(context_t *c) {
+static void s_context_enable(context_t *c) {
   log_trace("Enabling context %lx", (uint32_t)c);
+  if(c->callbacks->enable.callback)
+    c->callbacks->enable.callback(c, c->callbacks->enable.data, (v32_t)0ul);
   if (tasks.rotary_encoders)
     xTaskNotifyIndexed(tasks.rotary_encoders, NTFCN_IDX_CONTEXT, (uint32_t)c, eSetValueWithOverwrite);
   if (tasks.buttons)
@@ -48,19 +58,35 @@ inline static void context_enable(context_t *c) {
 
 /* ---------------------------------------------------------------------- */
 
+static void context_free(void *v) {
+  context_t *c = (context_t *)v;
+  ASSERT_IS_A(c, CONTEXT_T);
+  pcp_free(c->data);
+  vPortFree(c);
+}
+
 bool context_init(context_t *context,
   context_callback_table_t *callbacks,
   context_screen_t *screen,
-  context_leds_t *leds,
   void *data
 ) {
   if (context->data) return false;
-  context->magic_number = CONTEXT_T;
+  context->pcp.magic_number = CONTEXT_T | FREEABLE_P;
+  context->pcp.free = context_free;
   context->callbacks = callbacks;
   context->screen = screen;
-  context->leds = leds;
+  context->config_q = xQueueCreate(1, sizeof(context_config_msg_t));
   context->data = data;
   return true;
+}
+
+context_t *context_alloc( context_callback_table_t *callbacks,
+  context_screen_t *screen,
+  void *data
+) {
+  context_t *context = pcp_zero_malloc(sizeof(context_t));
+  context_init(context, callbacks, screen, data);
+  return context;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -89,6 +115,7 @@ bool context_screen_init(context_screen_t *cs) {
 void context_display_task(void *parm) {
   static bitmap_t screen_buffer;
   static context_t *c;
+  static context_leds_t *leds;
 
   /*  The screen needs a little time to warm up  */
   vTaskDelay(400 / portTICK_PERIOD_MS);
@@ -100,17 +127,17 @@ void context_display_task(void *parm) {
 
   for( ;; ) {
 
-    if (!xTaskNotifyWaitIndexed( NTFCN_IDX_EVENT, 0u, 0xFFFFFFFFu, (uint32_t *)(& c), portMAX_DELAY)) continue;
-    assert(c->magic_number == CONTEXT_T);
+    while (!xTaskNotifyWaitIndexed( NTFCN_IDX_EVENT, 0u, 0xFFFFFFFFu, (uint32_t *)(& c), portMAX_DELAY));
+
+    xTaskNotifyWaitIndexed( NTFCN_IDX_LEDS, 0u, 0u, (uint32_t *)(&leds), 0u);
+
+    ASSERT_IS_A(c, CONTEXT_T);
 
     if (!(c->screen && c->callbacks->screen.callback)) continue;
     bitmap_clear(&c->screen->pane);
-    if (c->callbacks->line1.callback) {
-      c->callbacks->line1.callback(c, c->callbacks->line1.data, (v32_t)0ul);
-    }
     c->callbacks->screen.callback(c, c->callbacks->screen.data, (v32_t)0ul);
 
-    if (c->leds) ws2812_put_pixels(c->leds->rgb_p, 3);
+    if (leds) ws2812_put_pixels(leds->rgb_p, 3);
 
     /* If an assert fails in the xSemaphoreTake, it likely means the ContextScreen is corrupt */
     bitmap_clear(&screen_buffer);
@@ -136,26 +163,29 @@ void context_display_task(void *parm) {
   }
 }
 
-void context_push(context_t *c) {
-  if (!context_stack) context_stack = xQueueCreate(10, sizeof(context_t *));
-  BaseType_t success = xQueueSendToFront(context_stack, &c, 0);
+void context_push(context_t *c, void *frame_data) {
+  if (!context_stack) context_stack = xQueueCreate(10, sizeof(context_frame_t));
+  log_trace("Pushing context %lx", c);
+  ASSERT_IS_A(c, CONTEXT_T);  /*  Make sure the context is (somewhat) initialized  */
+  context_frame_t f = { c, frame_data };
+  BaseType_t success = xQueueSendToFront(context_stack, &f, 0);
   assert(success == pdTRUE);
-  context_enable(c);
+  s_context_enable(c);
 }
 
 context_t *context_current() {
-  context_t *c;
-  BaseType_t success = xQueuePeek(context_stack, &c, 0);
+  context_frame_t f;
+  BaseType_t success = xQueuePeek(context_stack, &f, 0);
   assert(success == pdTRUE);
-  return c;
+  return f.context;
 }
 
 context_t *context_pop() {
-  context_t *leaving;
-  BaseType_t success = xQueueReceive(context_stack, &leaving, 0);
+  context_frame_t f;
+  BaseType_t success = xQueueReceive(context_stack, &f, 0);
   assert(success == pdTRUE);
-  context_enable(context_current());
-  return leaving;
+  s_context_enable(context_current());
+  return f.context;
 }
 
 uint32_t context_stack_depth() {

@@ -65,18 +65,17 @@ static void button_forward_callback(context_t* c, void *data, v32_t value) {
   menu_t *m = (menu_t *)data;
   ASSERT_IS_A(m, MENU_T);
 
-  menu_item_t *mi=&m->items[m->cursor_at];
-
-  if (mi->forward_cb) mi->forward_cb(mi);
-  if (value.u) context_push(m->items[m->cursor_at].enter_context);
+  if (value.u) context_push(m->items[m->cursor_at].enter_context, m->items[m->cursor_at].enter_data);
 }
 
 /* ---------------------------------------------------------------------- */
 
-void menu_init(context_t *c, menu_t *menu, context_leds_t *leds) {
+void menu_init(context_t *c, menu_t *menu, context_callback_f enable) {
   c->screen = pcp_zero_malloc(sizeof(context_screen_t));
   context_screen_init(c->screen);
   context_screen_set_re_label(c->screen, 0, "Up/Down");
+
+  menu->callbacks.enable.callback=enable;
 
   menu->callbacks.re[ROTARY_ENCODER_RED_OFFSET].callback=menu_re_callback;
   menu->callbacks.re[ROTARY_ENCODER_RED_OFFSET].data=menu;
@@ -89,5 +88,5 @@ void menu_init(context_t *c, menu_t *menu, context_leds_t *leds) {
 
   menu->selection_changed_cb(menu);
 
-  context_init(c, &menu->callbacks, c->screen, leds, &menu);
+  context_init(c, &menu->callbacks, c->screen, &menu);
 }

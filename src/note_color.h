@@ -39,7 +39,9 @@ const char *note_color_note_name(note_color_t *n);
 uint32_t *note_color_rgb_i(uint8_t i);
 uint32_t *note_color_rgb(note_color_t *n);
 note_color_t *note_color_ptr_i(uint8_t i);
+
 void note_color_init();
+void note_color_menu_init(context_t *c);
 
 #ifdef __cplusplus
 }

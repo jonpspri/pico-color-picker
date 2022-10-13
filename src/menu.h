@@ -35,7 +35,7 @@ struct menu_item {
   bool selectable;
   bool selected;
   context_t *enter_context;
-  void (*forward_cb)(menu_item_t *item);
+  void *enter_data;
   void *data;
 };
 
@@ -50,7 +50,7 @@ struct menu {
   menu_item_t *items;
 };
 
-void menu_init(context_t *c, menu_t *menu, context_leds_t *);
+void menu_init(context_t *c, menu_t *menu, context_callback_f enable);
 
 #ifdef __cplusplus
 }

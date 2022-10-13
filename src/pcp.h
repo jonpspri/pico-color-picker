@@ -36,10 +36,11 @@
 
 /* MAGIC NUMBERS */
 
-#define ASSERT_IS_A(x, y) assert(*((uint32_t *)(x)) == (y));
+#define TYPE_FILTER         0xFF
+#define ASSERT_IS_A(x, y) assert((*((uint32_t *)(x)) & TYPE_FILTER) == (y));
 
 #define UNINITIALIZED       0x00
-#define CONTEXT_SCREEN_T    0x01
+#define CONTEXT_SCREEN_T    0x01 /* Freeable */
 #define RGB_ENCODER_T       0x02
 #define RGB_ENCODERS_DATA_T 0x03
 #define CONTEXT_T           0x04
@@ -48,13 +49,31 @@
 #define MENU_T              0x07
 #define CHORD_T             0x08
 #define NOTE_COLOR_T        0x09
+#define RGB_ENCODER_FRAME_T 0x0A /* Freeable */
+
+#define FREEABLE_P          ( 1u << 31 )
 
 /* THREAD_LOCAL_STORAGE */
 #define TH_LOC_ST_CALLBACKS       0
 
 /* NOTIFICATION INDICES */
-#define NTFCN_IDX_EVENT            1
-#define NTFCN_IDX_CONTEXT          2
+#define NTFCN_IDX_EVENT         1
+#define NTFCN_IDX_CONTEXT       2
+#define NTFCN_IDX_LEDS          2
+
+/* ----------------------------------------------------------------------- */
+
+typedef struct pcp {
+  uint32_t magic_number;
+  void (*free)(void *);
+  bool autofree;
+} pcp_t;
+
+static inline void pcp_free(void *v) {
+  pcp_t *p = (pcp_t *)v;
+  if (!p->autofree || !(p->magic_number & FREEABLE_P)) return;
+  (p->free ?: vPortFree)(v);  /* GCC has the Elvis operator! */
+}
 
 /* ----------------------------------------------------------------------- */
 

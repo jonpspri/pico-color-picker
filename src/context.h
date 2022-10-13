@@ -69,17 +69,17 @@ typedef union v32 {
   uint32_t u;
 } v32_t;
 
+typedef void (*context_callback_f)(context_t *c, void *, v32_t);
 typedef struct {
-  void (*callback)(context_t *c, void *, v32_t);
+  context_callback_f callback;
   void *data;
 } context_callback_t;
 
 typedef struct {
+  context_callback_t enable;
   context_callback_t button[IO_PIO_SLOTS];
   context_callback_t re[IO_PIO_SLOTS/2];
   context_callback_t screen;
-  /*context_callback_t led;*/
-  context_callback_t line1;
 } context_callback_table_t;
 
 typedef struct context_screen {
@@ -96,16 +96,23 @@ typedef struct context_screen {
  *  changes the actual value, the display will automatically update.  Think of
  *  this as a quick and dirty "observer" pattern.
  */
-typedef struct {
+typedef struct context_leds {
   uint32_t magic_number;
   uint32_t *rgb_p[WS2812_PIXEL_COUNT];
 } context_leds_t;
 
+#define CTX_MSG_TYP_LINE1_CB 0x01
+
+typedef struct context_config_msg {
+  uint32_t msg_type;
+  void *msg_data;
+} context_config_msg_t;
+
 struct context {
-  uint32_t magic_number;
+  pcp_t pcp;
   context_callback_table_t *callbacks;
   context_screen_t *screen;
-  context_leds_t *leds;
+  QueueHandle_t config_q;
   void *data;
 };
 
@@ -119,19 +126,22 @@ extern struct context_rgbs ws2812_rgbs;
 
 extern task_list_t tasks;
 
-extern bool context_init(context_t *context,
+bool context_init(context_t *context,
     context_callback_table_t *callbacks,
     context_screen_t *screen,
-    context_leds_t *leds,
+    void *context_data);
+context_t *context_alloc(
+    context_callback_table_t *callbacks,
+    context_screen_t *screen,
     void *context_data);
 
-extern bool context_screen_init(context_screen_t *cs);
+bool context_screen_init(context_screen_t *cs);
 
-extern void context_leds_task(void *parm);
-extern void context_display_task(void *parm);
+void context_display_task(void *parm);
 
-void context_push(context_t *c);
+void context_push(context_t *c, void *f);
 context_t *context_current();
+void *context_frame_data();
 context_t *context_pop();
 uint32_t context_stack_depth();
 

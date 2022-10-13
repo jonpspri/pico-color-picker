@@ -166,8 +166,11 @@ void rotary_encoder_task(void *parm) {
 
   for( ;; ) {
     /* Update the context if necessary */
-    xTaskNotifyWaitIndexed(NTFCN_IDX_CONTEXT, 0u, 0u, (uint32_t *)(&context), context? 0 : portMAX_DELAY);
-    assert(!context || context->magic_number == CONTEXT_T);
+    do {
+      xTaskNotifyWaitIndexed(NTFCN_IDX_CONTEXT, 0u, 0u, (uint32_t *)(&context), context? 0 : portMAX_DELAY);
+    } while(!context);
+
+    ASSERT_IS_A(context, CONTEXT_T);
 
     log_trace("Processing Rotary Encoder input");
     for (int i=0; context && i<4; i++, bits >>= 2) {
@@ -183,6 +186,7 @@ void rotary_encoder_task(void *parm) {
     log_trace("Rotary encoder->UI Notification");
     context_notify_display_task(context);
 
-    if (!xTaskNotifyWaitIndexed(NTFCN_IDX_EVENT, 0u, 0xFFFFFFFFu, &bits, portMAX_DELAY)) continue;
+    /* Spin-wait for the next event */
+    while (!xTaskNotifyWaitIndexed(NTFCN_IDX_EVENT, 0u, 0xFFFFFFFFu, &bits, portMAX_DELAY));
   }
 }

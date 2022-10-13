@@ -96,14 +96,12 @@ add_executable(pico_color_picker
   bitmap_ssd1306.c
   button.c
   chord.c
-  color_menu.c
   context.c
   input.c
   log.c
   main.c
   menu.c
   note_color.c
-  rgb_encoder.c
   rotary_encoder.c
   ssd1306.c
   ws281x.c
