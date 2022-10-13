@@ -180,6 +180,13 @@ context_t *context_current() {
   return f.context;
 }
 
+void *context_frame_data() {
+  context_frame_t f;
+  BaseType_t success = xQueuePeek(context_stack, &f, 0);
+  assert(success == pdTRUE);
+  return f.data;
+}
+
 context_t *context_pop() {
   context_frame_t f;
   BaseType_t success = xQueueReceive(context_stack, &f, 0);

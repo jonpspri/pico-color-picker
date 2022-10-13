@@ -134,8 +134,17 @@ static void s_rgb_encoders_re_callback(context_t *c, void *re_v, v32_t delta) {
 
 static void s_display_callback(context_t *c, void *data, v32_t v) {
   static char hex_color_value[8];
+  rgb_encoder_frame_t *f = NULL;
 
   log_trace("Entering RGB Encoder s_display_callback");
+
+  if (c == context_current()) {
+    f = (rgb_encoder_frame_t *)context_frame_data();
+    if(f) ASSERT_IS_A(f, RGB_ENCODER_FRAME_T);
+  } else {
+    f = NULL;
+    log_warn("Context mismatch: %lx vs %lx", c, context_current());
+  }
 
   rgb_encoders_data_t *re = ((rgb_encoders_data_t *) c->data);
   assert(re->magic_number == RGB_ENCODERS_DATA_T);
@@ -147,6 +156,7 @@ static void s_display_callback(context_t *c, void *data, v32_t v) {
 
   sprintf(hex_color_value, "#%06lx", *re->rgb);
 
+  if (f) f->line1(f->ref);
   bitmap_draw_string(&c->screen->pane, 0, TRIPLE_LINE_TEXT_FONT.Height, &DOUBLE_LINE_TEXT_FONT, hex_color_value);
 }
 
