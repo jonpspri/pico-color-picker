@@ -106,7 +106,7 @@ void button_task(void *parm) {
       }
     }
 
-    context_callbackt *d = context_get_display_callback(context);
+    context_callback_t *d = context_get_display_callback(context);
     if (d) d->callback(context, d->data, (v32_t)0ul);
 
     while (!xTaskNotifyWaitIndexed(1, 0u, 0xFFFFFFFFu, &bits, portMAX_DELAY));

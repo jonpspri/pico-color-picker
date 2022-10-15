@@ -113,7 +113,7 @@ static rgb_encoder_frame_t *s_rgb_encoder_frame_alloc(void (*line1)(void *), voi
 }
 
 /* Have the compiler help us with type checking :) */
-static inline rgb_encoder_frame_t *s_menu_rgbe_frame_alloc(void (*line1)(void *), menu_item_t **mi) {
+static inline rgb_encoder_frame_t *s_menu_rgbe_frame_alloc(void (*line1)(void *), menu_item_t *mi) {
   return s_rgb_encoder_frame_alloc(line1, mi);
 }
 
@@ -170,7 +170,7 @@ static void s_rgbe_display_callback(context_t *c, void *data, v32_t v) {
       re->rgb_encoders[RE_GREEN_OFFSET].value,
       re->rgb_encoders[RE_BLUE_OFFSET].value);
 
-  sprintf(hex_color_value, "#%06lx", *re->rgb);
+  sprintf(hex_color_value, "#%06lx", (unsigned long)*re->rgb);
 
   if (f) f->line1(f->ref);
   bitmap_draw_string(context_get_drawing_pane(c), 0, TRIPLE_LINE_TEXT_FONT.Height, &DOUBLE_LINE_TEXT_FONT, hex_color_value);
@@ -240,35 +240,18 @@ static void s_menu_render_item_callback(menu_item_t *item, bitmap_t *item_bitmap
 }
 
 static void s_line1_render_callback(void *data) {
-  menu_item_t **item = (menu_item_t **)data;
-  ASSERT_IS_A(*item, MENU_ITEM_T);
+  menu_item_t *item = (menu_item_t *)data;
+  ASSERT_IS_A(item, MENU_ITEM_T);
 
-  s_menu_render_item_callback(*item, context_get_drawing_pane(NULL));
+  s_menu_render_item_callback(item, context_get_drawing_pane(NULL));
 }
 
 static void s_selection_changed_callback(menu_t *menu) {
   rgbe_leds.magic_number = CONTEXT_LEDS_T;
-  uint8_t i = menu_cursor_at(menu);
+  uint8_t i = menu_cursor_at(menu, 0);  /* TODO: Should this be a cursor? */
   rgbe_leds.rgb_p[0] = &note_colors[(i + NOTE_COUNT - 1) % NOTE_COUNT].rgb;
   rgbe_leds.rgb_p[1] = &note_colors[i].rgb;
   rgbe_leds.rgb_p[2] = &note_colors[(i + 1) % NOTE_COUNT].rgb;
-}
-
-static menu_item_t **s_color_menu_items() {
-#ifndef NDEBUG
-  /*  Validate that the initialize code is only called once */
-  static bool initialize_called;
-  assert(!initialize_called);
-  initialize_called = true;
-#endif
-
-  menu_item_t **color_items = pcp_zero_malloc(NOTE_COUNT * sizeof(menu_item_t *));
-  for (uint8_t i=0; i<NOTE_COUNT; i++) {
-    color_items[i] = menu_item_alloc(note_colors[i].rgbe_ctx,
-        s_menu_rgbe_frame_alloc(s_line1_render_callback, &color_items[i]), &note_colors[i]);
-  }
-
-  return color_items;
 }
 
 static void s_color_menu_entry(context_t *c, void *data, v32_t v) {
@@ -348,8 +331,14 @@ void note_color_init() {
 }
 
 context_t *note_color_menu_alloc() {
-  menu_builder_init();
-  menu_builder_set_items(s_color_menu_items(), NOTE_COUNT);
+  menu_builder_init(1, NOTE_COUNT);
+
+  for (uint8_t i=0; i<NOTE_COUNT; i++) {
+    menu_builder_set_item_enter_ctx(i, note_colors[i].rgbe_ctx,
+        s_menu_rgbe_frame_alloc(s_line1_render_callback, menu_builder_get_item_ptr(i)));
+    menu_builder_set_item_data(i, &note_colors[i]);
+  }
+
   menu_builder_set_render_item_cb(s_menu_render_item_callback);
   menu_builder_set_selection_changed_cb(s_selection_changed_callback);
   context_builder_set_enable_callback(s_color_menu_entry, 0);

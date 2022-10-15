@@ -32,17 +32,22 @@ extern "C" {
 typedef struct menu_item menu_item_t;
 typedef struct menu menu_t;
 
-void menu_builder_init();
-void menu_builder_set_items(menu_item_t **, uint8_t);
+/* Menu builder functions */
+void menu_builder_init(uint8_t cursors, uint8_t items);
 void menu_builder_set_selection_changed_cb(void (*)(menu_t *));
 void menu_builder_set_render_item_cb(void (*)(menu_item_t *, bitmap_t *));
+void menu_builder_set_item_enter_ctx(uint8_t item, context_t *ctx, void *data);
+void menu_builder_set_item_data(uint8_t item, void *data);
+menu_item_t *menu_builder_get_item_ptr(uint8_t item);
+
 context_t *menu_builder_finalize();
 
 menu_item_t *menu_item_alloc(context_t *enter_context, void *enter_data, void *data);
 
 void *menu_item_data(menu_item_t *mi);
 
-uint8_t menu_cursor_at(menu_t *);
+uint8_t menu_cursor_at(menu_t *, uint8_t cursor);
+menu_item_t *menu_item_at(menu_t *, uint8_t cursor, int8_t offset);
 
 #ifdef __cplusplus
 }

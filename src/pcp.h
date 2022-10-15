@@ -65,12 +65,13 @@ typedef void (*context_callback_f)(context_t *c, void *, v32_t);
 #define RGB_ENCODERS_DATA_T   3
 #define CONTEXT_T             4
 #define CONTEXT_LEDS_T        5
-#define MENU_ITEM_T         ( 6 | FREEABLE_P )
+#define MENU_ITEM_T           6 /* Embedded in MENU_T */
 #define MENU_T              ( 7 | FREEABLE_P )
 #define CHORD_T               8
 #define NOTE_COLOR_T          9
 #define RGB_ENCODER_FRAME_T  10  /* Freeable */
 #define BITMAP_T             11  /* Freeable */
+#define CURSOR_T             12  /* Embedded in MENU_T */
 
 #define FREEABLE_P          ( 1u << 31 )
 
