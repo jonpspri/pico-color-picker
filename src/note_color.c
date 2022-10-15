@@ -32,10 +32,13 @@
 #include "pcp.h"
 #include "log.h"
 
+#include "bitmap.h"
 #include "button.h"
 #include "context.h"
-#include "note_color.h"
 #include "menu.h"
+#include "note_color.h"
+
+#define CELL_WIDTH (RE_LABEL_TOTAL_WIDTH/3)
 
 /* ---------------------------------------------------------------------- */
 
@@ -44,7 +47,7 @@ struct note_color {
   uint32_t magic_number;
   const char *note_name;
   uint32_t rgb;
-  context_t *rgb_encoder_ctx;
+  context_t *rgbe_ctx;
 };
 
 typedef struct {
@@ -56,10 +59,9 @@ typedef struct {
 } rgb_encoder_t;
 
 typedef struct rgb_encoders_data {
-  uint32_t magic_number;
-  SemaphoreHandle_t rgb_encoder_mutex;
+  pcp_t pcp;
+  SemaphoreHandle_t rgbe_mutex;
   uint32_t *rgb;
-  context_callback_table_t callbacks;
   rgb_encoder_t rgb_encoders[IO_PIO_SLOTS/2];  /*  We waste storage to simplify lookup.  Maybe not necessary with callbacks?  */
 } rgb_encoders_data_t;
 
@@ -69,50 +71,64 @@ typedef struct rgb_encoder_frame {
   void *ref;
 } rgb_encoder_frame_t;
 
+typedef struct chord chord_t;
+struct chord {
+  pcp_t pcp;
+  note_color_t *note_colors[3];
+  context_leds_t leds;
+};
+
 /* ---------------------------------------------------------------------- */
 
-static const char *initial_names[12] = {
+#define NOTE_COUNT 12
+
+static const char *initial_names[NOTE_COUNT] = {
   "C", "C#/Db", "D", "D#/Eb", "E", "F",
   "F#/Gb", "G", "G#/Ab", "A", "A#/B#", "B"
 };
 
-static uint32_t initial_rgbs[12] = {
+static uint32_t initial_rgbs[NOTE_COUNT] = {
 0xFF0000 , 0xcc1100 , 0xbb2200 , 0xcc5500 , 0xffcc00 , 0x33ff00 ,
 0x00cd71 , 0x008AA1 , 0x2161b0 , 0x2200ff , 0x860e90 , 0xB8154A
 };
 
 /* ---------------------------------------------------------------------- */
 
-static note_color_t note_colors[12];
-static context_screen_t cs;
+static note_color_t note_colors[NOTE_COUNT];
 
-static context_leds_t rgb_ptrs;
-static menu_item_t color_items[12];
-static menu_t colors_menu;
+static context_leds_t rgbe_leds;
+
+static chord_t chord;
 
 /* ---------------------------------------------------------------------- */
 
-static rgb_encoder_frame_t *rgb_encoder_frame_alloc(void (*line1)(void *), void *ref) {
+static rgb_encoder_frame_t *s_rgb_encoder_frame_alloc(void (*line1)(void *), void *ref) {
   rgb_encoder_frame_t *f = pcp_zero_malloc(sizeof(rgb_encoder_frame_t));
   f->pcp.magic_number = RGB_ENCODER_FRAME_T | FREEABLE_P;
-  f->pcp.free = vPortFree;
+  f->pcp.free_f = vPortFree;
+  f->pcp.autofree_p = true;
   f->line1 = line1;
   f->ref = ref;
   return f;
 }
 
-static uint32_t s_rgb_encoders_value(rgb_encoders_data_t *re) {
+/* Have the compiler help us with type checking :) */
+static inline rgb_encoder_frame_t *s_menu_rgbe_frame_alloc(void (*line1)(void *), menu_item_t **mi) {
+  return s_rgb_encoder_frame_alloc(line1, mi);
+}
+
+static uint32_t s_rgbes_value(rgb_encoders_data_t *re) {
   uint32_t rgb=0u;
-  xSemaphoreTake(re->rgb_encoder_mutex, portMAX_DELAY);
+  xSemaphoreTake(re->rgbe_mutex, portMAX_DELAY);
   for (int i=0; i<4; i++) {
     if (!re->rgb_encoders[i].active) continue;
     rgb |= re->rgb_encoders[i].value << re->rgb_encoders[i].shift;
   }
-  xSemaphoreGive(re->rgb_encoder_mutex);
+  xSemaphoreGive(re->rgbe_mutex);
   return rgb;
 }
 
-static void s_rgb_encoders_re_callback(context_t *c, void *re_v, v32_t delta) {
+static void s_rgbes_re_callback(context_t *c, void *re_v, v32_t delta) {
   rgb_encoder_t *re = (rgb_encoder_t *)re_v;
   assert(re->magic_number == RGB_ENCODER_T);
 
@@ -127,16 +143,16 @@ static void s_rgb_encoders_re_callback(context_t *c, void *re_v, v32_t delta) {
 
   rgb_encoders_data_t *red = (rgb_encoders_data_t *)c->data;
   ASSERT_IS_A(red, RGB_ENCODERS_DATA_T);
-  *red->rgb = s_rgb_encoders_value((rgb_encoders_data_t *)c->data);
+  *red->rgb = s_rgbes_value((rgb_encoders_data_t *)c->data);
 
   log_trace("RGB Encoder new value %02x", re->value);
 };
 
-static void s_display_callback(context_t *c, void *data, v32_t v) {
+static void s_rgbe_display_callback(context_t *c, void *data, v32_t v) {
   static char hex_color_value[8];
   rgb_encoder_frame_t *f = NULL;
 
-  log_trace("Entering RGB Encoder s_display_callback");
+  log_trace("Entering RGB Encoder s_rgbe_display_callback");
 
   if (c == context_current()) {
     f = (rgb_encoder_frame_t *)context_frame_data();
@@ -147,100 +163,98 @@ static void s_display_callback(context_t *c, void *data, v32_t v) {
   }
 
   rgb_encoders_data_t *re = ((rgb_encoders_data_t *) c->data);
-  assert(re->magic_number == RGB_ENCODERS_DATA_T);
+  ASSERT_IS_A(re, RGB_ENCODERS_DATA_T);
 
   log_trace("-- UI Decoder with REs %02x %02x %02x",
-      re->rgb_encoders[ROTARY_ENCODER_RED_OFFSET].value,
-      re->rgb_encoders[ROTARY_ENCODER_GREEN_OFFSET].value,
-      re->rgb_encoders[ROTARY_ENCODER_BLUE_OFFSET].value);
+      re->rgb_encoders[RE_RED_OFFSET].value,
+      re->rgb_encoders[RE_GREEN_OFFSET].value,
+      re->rgb_encoders[RE_BLUE_OFFSET].value);
 
   sprintf(hex_color_value, "#%06lx", *re->rgb);
 
   if (f) f->line1(f->ref);
-  bitmap_draw_string(&c->screen->pane, 0, TRIPLE_LINE_TEXT_FONT.Height, &DOUBLE_LINE_TEXT_FONT, hex_color_value);
+  bitmap_draw_string(context_get_drawing_pane(c), 0, TRIPLE_LINE_TEXT_FONT.Height, &DOUBLE_LINE_TEXT_FONT, hex_color_value);
 }
 
-static context_t *s_rgb_encoder_init(uint32_t *rgb) {
-  rgb_encoders_data_t *rgb_encoders=pcp_zero_malloc(sizeof(struct rgb_encoders_data));
-  rgb_encoders->magic_number = RGB_ENCODERS_DATA_T;
+static context_t *s_rgbe_init(uint32_t *rgb) {
+  /*
+   *  Step 1 - Initialize the underlying data storage object for the context
+   */
+  rgb_encoders_data_t *rgbes=pcp_zero_malloc(sizeof(rgb_encoders_data_t));
+  rgbes->pcp.magic_number = RGB_ENCODERS_DATA_T | FREEABLE_P;
+  rgbes->pcp.free_f = vPortFree;
+  rgbes->pcp.autofree_p = true;
+  rgbes->rgbe_mutex=xSemaphoreCreateMutex();
+  rgbes->rgb=rgb;
 
-  rgb_encoders->rgb_encoder_mutex=xSemaphoreCreateMutex();
-  rgb_encoders->rgb_encoders[ROTARY_ENCODER_RED_OFFSET].magic_number = RGB_ENCODER_T;
-  rgb_encoders->rgb_encoders[ROTARY_ENCODER_RED_OFFSET].active = true;
-  rgb_encoders->rgb_encoders[ROTARY_ENCODER_RED_OFFSET].shift = 16;
-  rgb_encoders->rgb_encoders[ROTARY_ENCODER_RED_OFFSET].button_offset = BUTTON_RED_OFFSET;
-  rgb_encoders->rgb_encoders[ROTARY_ENCODER_RED_OFFSET].value = *rgb >> 16 & 0xff;
-  rgb_encoders->rgb_encoders[ROTARY_ENCODER_GREEN_OFFSET].magic_number = RGB_ENCODER_T;
-  rgb_encoders->rgb_encoders[ROTARY_ENCODER_GREEN_OFFSET].active = true;
-  rgb_encoders->rgb_encoders[ROTARY_ENCODER_GREEN_OFFSET].shift = 8;
-  rgb_encoders->rgb_encoders[ROTARY_ENCODER_GREEN_OFFSET].button_offset = BUTTON_GREEN_OFFSET;
-  rgb_encoders->rgb_encoders[ROTARY_ENCODER_GREEN_OFFSET].value = *rgb >> 8 & 0xff;
-  rgb_encoders->rgb_encoders[ROTARY_ENCODER_BLUE_OFFSET].magic_number = RGB_ENCODER_T;
-  rgb_encoders->rgb_encoders[ROTARY_ENCODER_BLUE_OFFSET].active = true;
-  rgb_encoders->rgb_encoders[ROTARY_ENCODER_BLUE_OFFSET].shift = 0;
-  rgb_encoders->rgb_encoders[ROTARY_ENCODER_BLUE_OFFSET].button_offset = BUTTON_BLUE_OFFSET;
-  rgb_encoders->rgb_encoders[ROTARY_ENCODER_BLUE_OFFSET].value = *rgb & 0xff;
+  log_trace("Start context build for RGB Encoder");
+  context_builder_init();
 
-  rgb_encoders->rgb=rgb;
+  /*
+   *  Step 2 - Map encoders to RGB components and initialize value
+   */
 
-  rgb_encoders->callbacks.re[ROTARY_ENCODER_RED_OFFSET].callback=s_rgb_encoders_re_callback;
-  rgb_encoders->callbacks.re[ROTARY_ENCODER_RED_OFFSET].data=&rgb_encoders->rgb_encoders[ROTARY_ENCODER_RED_OFFSET];
-  rgb_encoders->callbacks.re[ROTARY_ENCODER_GREEN_OFFSET].callback=s_rgb_encoders_re_callback;
-  rgb_encoders->callbacks.re[ROTARY_ENCODER_GREEN_OFFSET].data=&rgb_encoders->rgb_encoders[ROTARY_ENCODER_GREEN_OFFSET];
-  rgb_encoders->callbacks.re[ROTARY_ENCODER_BLUE_OFFSET].callback=s_rgb_encoders_re_callback;
-  rgb_encoders->callbacks.re[ROTARY_ENCODER_BLUE_OFFSET].data=&rgb_encoders->rgb_encoders[ROTARY_ENCODER_BLUE_OFFSET];
+  rgbes->rgb_encoders[RE_RED_OFFSET].magic_number = RGB_ENCODER_T;
+  rgbes->rgb_encoders[RE_RED_OFFSET].active = true;
+  rgbes->rgb_encoders[RE_RED_OFFSET].shift = 16;
+  rgbes->rgb_encoders[RE_RED_OFFSET].button_offset = BUTTON_RED_OFFSET;
+  rgbes->rgb_encoders[RE_RED_OFFSET].value = *rgb >> 16 & 0xff;
+  rgbes->rgb_encoders[RE_GREEN_OFFSET].magic_number = RGB_ENCODER_T;
+  rgbes->rgb_encoders[RE_GREEN_OFFSET].active = true;
+  rgbes->rgb_encoders[RE_GREEN_OFFSET].shift = 8;
+  rgbes->rgb_encoders[RE_GREEN_OFFSET].button_offset = BUTTON_GREEN_OFFSET;
+  rgbes->rgb_encoders[RE_GREEN_OFFSET].value = *rgb >> 8 & 0xff;
+  rgbes->rgb_encoders[RE_BLUE_OFFSET].magic_number = RGB_ENCODER_T;
+  rgbes->rgb_encoders[RE_BLUE_OFFSET].active = true;
+  rgbes->rgb_encoders[RE_BLUE_OFFSET].shift = 0;
+  rgbes->rgb_encoders[RE_BLUE_OFFSET].button_offset = BUTTON_BLUE_OFFSET;
+  rgbes->rgb_encoders[RE_BLUE_OFFSET].value = *rgb & 0xff;
 
-  rgb_encoders->callbacks.button[BUTTON_UPPER_OFFSET].callback=button_return_callback;
+  /*
+   *  Step 3 - Define context.
+   */
+  context_builder_set_red_re(s_rgbes_re_callback, &rgbes->rgb_encoders[RE_RED_OFFSET], NULL, NULL, "Red");
+  context_builder_set_green_re(s_rgbes_re_callback, &rgbes->rgb_encoders[RE_GREEN_OFFSET], NULL, NULL, "Green");
+  context_builder_set_blue_re(s_rgbes_re_callback, &rgbes->rgb_encoders[RE_BLUE_OFFSET], NULL, NULL, "Blue");
 
-  rgb_encoders->callbacks.screen.callback=s_display_callback;
-  rgb_encoders->callbacks.screen.data=(void *)rgb_encoders;
+  context_builder_set_upper_button(button_return_callback, NULL, LAQUO);
 
-  context_screen_init(&cs);
-  context_screen_set_re_label(&cs, 0, "Red");
-  context_screen_set_re_label(&cs, 1, "Green");
-  context_screen_set_re_label(&cs, 2, "Blue");
-  cs.button_chars[0] = LAQUO;
-  cs.button_chars[1] = 32;
+  context_builder_set_display_callback(s_rgbe_display_callback, rgbes);
 
-  return context_alloc(&rgb_encoders->callbacks, &cs, rgb_encoders);
+  context_builder_set_data(rgbes);
+
+
+  log_trace("Finalizing context build for RGB Encoder");
+  return context_builder_finalize();
 }
 
 
-static void menu_render_item_callback(menu_item_t *item, bitmap_t *item_bitmap) {
+static void s_menu_render_item_callback(menu_item_t *item, bitmap_t *item_bitmap) {
   char buffer[25];
-  note_color_t *nc = (note_color_t *)item->data;
+  note_color_t *nc = (note_color_t *)menu_item_data(item);
   ASSERT_IS_A(nc, NOTE_COLOR_T);
 
   bitmap_clear(item_bitmap);
-  sprintf(buffer, "%-5s #%06lx", note_color_note_name(nc), *note_color_rgb(nc));
+  sprintf(buffer, "%-5s #%06lx", nc->note_name, nc->rgb);
   bitmap_draw_string(item_bitmap, 8, 0, &TRIPLE_LINE_TEXT_FONT, buffer);
-
-  /* TO DO:  This doesn't really belong here.  There should be a separate selection changed callback. */
-  /* rgb_ptrs.rgb_p[line_number] = &nc->rgb; */
-
-  if(!item->selectable) return;
-  if(item->selected) {
-    bitmap_draw_square(item_bitmap, 0, 1, 4, 5);
-  } else {
-    bitmap_draw_empty_square(item_bitmap, 0, 1, 4, 5);
-  }
 }
 
 static void s_line1_render_callback(void *data) {
-  menu_item_t *item = (menu_item_t *)data;
-  ASSERT_IS_A(item, MENU_ITEM_T);
+  menu_item_t **item = (menu_item_t **)data;
+  ASSERT_IS_A(*item, MENU_ITEM_T);
 
-  menu_render_item_callback(item, &context_current()->screen->pane);
+  s_menu_render_item_callback(*item, context_get_drawing_pane(NULL));
 }
 
-static void selection_changed_callback(menu_t *menu) {
-  rgb_ptrs.magic_number = CONTEXT_LEDS_T;
-  rgb_ptrs.rgb_p[0] = note_color_rgb_i((menu->cursor_at + menu->item_count - 1) % menu->item_count);
-  rgb_ptrs.rgb_p[1] = note_color_rgb_i(menu->cursor_at);
-  rgb_ptrs.rgb_p[2] = note_color_rgb_i((menu->cursor_at + 1) % menu->item_count);
+static void s_selection_changed_callback(menu_t *menu) {
+  rgbe_leds.magic_number = CONTEXT_LEDS_T;
+  uint8_t i = menu_cursor_at(menu);
+  rgbe_leds.rgb_p[0] = &note_colors[(i + NOTE_COUNT - 1) % NOTE_COUNT].rgb;
+  rgbe_leds.rgb_p[1] = &note_colors[i].rgb;
+  rgbe_leds.rgb_p[2] = &note_colors[(i + 1) % NOTE_COUNT].rgb;
 }
 
-static menu_item_t *color_menu_items(context_t *c) {
+static menu_item_t **s_color_menu_items() {
 #ifndef NDEBUG
   /*  Validate that the initialize code is only called once */
   static bool initialize_called;
@@ -248,65 +262,129 @@ static menu_item_t *color_menu_items(context_t *c) {
   initialize_called = true;
 #endif
 
-  note_color_init();
-  for (uint8_t i=0; i<12; i++) {
-    color_items[i].magic_number = MENU_ITEM_T;
-    color_items[i].selectable = false;
-    color_items[i].selected = 0;
-    color_items[i].enter_context = note_colors[i].rgb_encoder_ctx;
-    color_items[i].enter_data = rgb_encoder_frame_alloc(s_line1_render_callback, &color_items[i]);
-    color_items[i].data = note_color_ptr_i(i);
+  menu_item_t **color_items = pcp_zero_malloc(NOTE_COUNT * sizeof(menu_item_t *));
+  for (uint8_t i=0; i<NOTE_COUNT; i++) {
+    color_items[i] = menu_item_alloc(note_colors[i].rgbe_ctx,
+        s_menu_rgbe_frame_alloc(s_line1_render_callback, &color_items[i]), &note_colors[i]);
   }
 
   return color_items;
 }
 
 static void s_color_menu_entry(context_t *c, void *data, v32_t v) {
-  xTaskNotifyIndexed(tasks.display, NTFCN_IDX_LEDS, (uint32_t)&rgb_ptrs, eSetValueWithOverwrite);
+  xTaskNotifyIndexed(tasks.display, NTFCN_IDX_LEDS, (uint32_t)&rgbe_leds, eSetValueWithOverwrite);
+}
+
+static void s_chord_line1_callback(context_t *c, void *data, v32_t v) {
+
+}
+
+static note_color_t *note_color_rel(note_color_t *nc, int8_t v) {
+  assert(-1 <= v && v <= 1);
+  int8_t idx = nc - note_colors;
+  return &note_colors[(idx + 12 + v) % 12];
+}
+
+static void s_chord_display_callback(context_t *c, void *data, v32_t v) {
+  static bitmap_t *b;
+  bitmap_t *pane = context_get_drawing_pane(c);
+
+  if (!b) b = bitmap_alloc(RE_LABEL_TOTAL_WIDTH, TRIPLE_LINE_TEXT_FONT.Height, NULL);
+
+  for (int8_t i=-1; i<2; i++) {
+    bitmap_clear(b);
+    for (uint8_t j=0; j<3; j++) {
+      const char *n = note_color_rel(chord.note_colors[j], i)->note_name;
+      bitmap_draw_string(b,
+          j*CELL_WIDTH + CELL_WIDTH/2 - strlen(n)*TRIPLE_LINE_TEXT_FONT.Width/2,
+          0, &TRIPLE_LINE_TEXT_FONT, n);
+    }
+    if (i == 0) bitmap_invert(b);
+    bitmap_copy_from(pane, b, 0, (i+1)*TRIPLE_LINE_TEXT_FONT.Height);
+  }
+}
+
+static void s_update_chord_leds() {
+  chord.leds.magic_number = CONTEXT_LEDS_T;
+  for (uint8_t i=0; i<3; i++) chord.leds.rgb_p[i] = &chord.note_colors[i]->rgb;
+}
+
+static note_color_t *note_color_slide(note_color_t *nc, int32_t v) {
+  int32_t i = nc - &note_colors[0];
+  assert( 0 <= i && i < 12 );
+
+  i += 12 + v;
+  i %= 12;
+
+  return &note_colors[i];
+}
+
+static void s_chord_re_callback(context_t *c, void *data, v32_t v) {
+  note_color_t **nc_ptr = (note_color_t **)data;
+  ASSERT_IS_A(*nc_ptr, NOTE_COLOR_T);
+
+  *nc_ptr = note_color_slide(*nc_ptr, v.s);
+
+  s_update_chord_leds();
+}
+
+static void s_chord_button_callback(context_t* c, void *data, v32_t value) {
+  note_color_t **nc_ptr = (note_color_t **)data;
+  ASSERT_IS_A(*nc_ptr, NOTE_COLOR_T);
+
+  if (value.u) context_push((*nc_ptr)->rgbe_ctx, 0);
 }
 
 /* ---------------------------------------------------------------------- */
-
-void note_color_menu_init(context_t *c) {
-  assert(!colors_menu.items); /* This function should be called only once */
-
-  colors_menu.magic_number = MENU_T;
-  colors_menu.item_count = 12;
-  colors_menu.render_item_cb = menu_render_item_callback;
-  colors_menu.selection_changed_cb = selection_changed_callback;
-  colors_menu.items = color_menu_items(c);
-
-  menu_init(c, &colors_menu, &s_color_menu_entry);
-}
-
-const char *note_color_note_name_i(uint8_t i) {
-  assert(i<12);
-  return note_colors[i].note_name;
-}
-
-const char *note_color_note_name(note_color_t *n) {
-  return n->note_name;
-}
-
-uint32_t *note_color_rgb_i(uint8_t i) {
-  assert(i<12);
-  return &note_colors[i].rgb;
-}
-
-uint32_t *note_color_rgb(note_color_t *n) {
-  return &n->rgb;
-}
-
-note_color_t *note_color_ptr_i(uint8_t i) {
-  assert(i<12);
-  return &note_colors[i];
-}
 
 void note_color_init() {
   for(uint8_t i=0; i<12; i++) {
     note_colors[i].magic_number = NOTE_COLOR_T;
     note_colors[i].note_name = initial_names[i];
     note_colors[i].rgb = initial_rgbs[i];
-    note_colors[i].rgb_encoder_ctx = s_rgb_encoder_init(&note_colors[i].rgb);
+    log_trace("Initializing RGB Encoder #%d", i);
+    note_colors[i].rgbe_ctx = s_rgbe_init(&note_colors[i].rgb);
   }
+}
+
+context_t *note_color_menu_alloc() {
+  menu_builder_init();
+  menu_builder_set_items(s_color_menu_items(), NOTE_COUNT);
+  menu_builder_set_render_item_cb(s_menu_render_item_callback);
+  menu_builder_set_selection_changed_cb(s_selection_changed_callback);
+  context_builder_set_enable_callback(s_color_menu_entry, 0);
+
+  return menu_builder_finalize();
+}
+
+context_t *chord_init() {
+  /*
+   *  Step 1 - Validate the unininitialized object and initialize any
+   *           necessary values.
+   */
+  assert(chord.pcp.magic_number == UNINITIALIZED);
+  chord.pcp.magic_number = CHORD_T;
+  chord.pcp.free_f = NULL;
+  chord.pcp.autofree_p = false;
+  context_builder_init();
+
+  /*
+   *  Step 2 - Define input device callbacks.
+   */
+  context_builder_set_red_re(s_chord_re_callback, &chord.note_colors[0], s_chord_button_callback, &chord.note_colors[0], "Note 1");
+  context_builder_set_green_re(s_chord_re_callback, &chord.note_colors[1], s_chord_button_callback, &chord.note_colors[0], "Note 2");
+  context_builder_set_blue_re(s_chord_re_callback, &chord.note_colors[2], s_chord_button_callback, &chord.note_colors[0], "Note 3");
+
+  context_builder_set_display_callback(s_chord_display_callback, &chord);
+  context_builder_set_data(&chord);
+
+  /*
+   *  Step 5 - First update of the LEDs
+   */
+  s_update_chord_leds();
+
+  /*
+   *  Step 6 - Initialize the underlying context
+   */
+  return context_builder_finalize();
 }

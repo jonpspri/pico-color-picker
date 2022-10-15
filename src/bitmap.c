@@ -67,6 +67,18 @@ static void w_free_buffer(bitmap_t *b) {
 
 /* ---------------------------------------------------------------------- */
 
+void bitmap_free(void *v) {
+  bitmap_t *b = (bitmap_t *)v;
+  ASSERT_IS_A(b, BITMAP_T);
+
+  if (b->free_buffer) {
+    b->free_buffer(b);
+  } else {
+    if (b->buffer) vPortFree(b->buffer);
+  }
+  vPortFree(v);
+}
+
 /** @brief Initialize a bitmap if needed
  *  @param b The \ref bitmap_t to be initialized
  *  @param width Width of the new bitmap
@@ -74,8 +86,12 @@ static void w_free_buffer(bitmap_t *b) {
  *  @param custom_init A custom initializer hook for the bitmap, or `NULL` for a standard bitmap.
  *  @return `true` if initialization was required.
  */
-bool bitmap_init(bitmap_t *b, uint32_t width, uint32_t height, void (*custom_init)(bitmap_t *)) {
-  if(b->buffer) return false;
+bitmap_t *bitmap_alloc(uint32_t width, uint32_t height, void (*custom_init)(bitmap_t *)) {
+  bitmap_t *b = pcp_zero_malloc(sizeof(bitmap_t));
+  b->pcp.magic_number = BITMAP_T | FREEABLE_P;
+  b->pcp.free_f = bitmap_free;
+  b->pcp.autofree_p = true;
+
   b->width = width;
   b->height = height;
   b->inverted = false;
@@ -90,12 +106,7 @@ bool bitmap_init(bitmap_t *b, uint32_t width, uint32_t height, void (*custom_ini
   } else {
     custom_init(b);
   }
-  return true;
-}
-
-void bitmap_free(bitmap_t *bitmap) {
-  vPortFree(bitmap->buffer);
-  vPortFree(bitmap);
+  return b;
 }
 
 void bitmap_copy_from(bitmap_t *b, bitmap_t *source, uint32_t x, uint32_t y) {

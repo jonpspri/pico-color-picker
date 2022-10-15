@@ -97,13 +97,17 @@ void button_task(void *parm) {
       } else {
         buttons_depressed &= ~(1<<i);
       }
-      context_callback_t *c = &context->callbacks->button[i];
-      if(c->callback) c->callback(context, c->data, (v32_t)(bits & 2u));
+      context_callback_t *c = context_get_button_callback(context, i);
+      if(c->callback) {
+        log_trace("Button %d executing callback %lx", i, c->callback);
+        c->callback(context, c->data, (v32_t)(bits & 2u));
+      } else {
+        log_trace("No callback for button %d", i);
+      }
     }
 
-    if (context->callbacks->screen.callback) {
-      context->callbacks->screen.callback(context, context->callbacks->screen.data, (v32_t)0ul);
-    }
+    context_callbackt *d = context_get_display_callback(context);
+    if (d) d->callback(context, d->data, (v32_t)0ul);
 
     while (!xTaskNotifyWaitIndexed(1, 0u, 0xFFFFFFFFu, &bits, portMAX_DELAY));
     log_trace("Button event received: %lx", bits);

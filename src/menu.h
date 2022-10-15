@@ -30,27 +30,19 @@ extern "C" {
 #endif
 
 typedef struct menu_item menu_item_t;
-struct menu_item {
-  uint32_t magic_number;
-  bool selectable;
-  bool selected;
-  context_t *enter_context;
-  void *enter_data;
-  void *data;
-};
-
 typedef struct menu menu_t;
-struct menu {
-  uint32_t magic_number;
-  uint8_t cursor_at;
-  uint8_t item_count;
-  context_callback_table_t callbacks;
-  void (*selection_changed_cb)(menu_t *menu);
-  void (*render_item_cb)(menu_item_t *item, bitmap_t *b);
-  menu_item_t *items;
-};
 
-void menu_init(context_t *c, menu_t *menu, context_callback_f enable);
+void menu_builder_init();
+void menu_builder_set_items(menu_item_t **, uint8_t);
+void menu_builder_set_selection_changed_cb(void (*)(menu_t *));
+void menu_builder_set_render_item_cb(void (*)(menu_item_t *, bitmap_t *));
+context_t *menu_builder_finalize();
+
+menu_item_t *menu_item_alloc(context_t *enter_context, void *enter_data, void *data);
+
+void *menu_item_data(menu_item_t *mi);
+
+uint8_t menu_cursor_at(menu_t *);
 
 #ifdef __cplusplus
 }

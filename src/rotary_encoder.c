@@ -104,11 +104,11 @@ __isr static void rotary_encoder_interrupt_handler(PIO pio, uint8_t sm, TaskHand
        * Step 3 - adjust the sub-count (between-detent clicks) and callback if we hit a detent
        */
       re->sub_count += transitions[idx];
-      if (re->sub_count >= ROTARY_ENCODER_DIVISOR) {
+      if (re->sub_count >= RE_DIVISOR) {
         /* debug_printf("RE %d +1 (index %d)", i, transition_history_idx); */
         notify_bits |= 1 << (i*2);
         re->sub_count = 0;
-      } else if (re->sub_count <= ROTARY_ENCODER_DIVISOR * -1) {
+      } else if (re->sub_count <= RE_DIVISOR * -1) {
         /* debug_printf("RE %d -1 (index %d)", i, transition_history_idx); */
         notify_bits |= 1 << (i*2+1);
         re->sub_count = 0;
@@ -157,10 +157,10 @@ static void rotary_encoder_init(uint8_t low_pin, uint8_t sm) {
 void rotary_encoder_task(void *parm) {
   context_t *context = NULL;
 
-  rotary_encoder_register(ROTARY_ENCODER_RED_OFFSET, ROTARY_ENCODER_RED_INVERTED);
-  rotary_encoder_register(ROTARY_ENCODER_GREEN_OFFSET, ROTARY_ENCODER_GREEN_INVERTED);
-  rotary_encoder_register(ROTARY_ENCODER_BLUE_OFFSET, ROTARY_ENCODER_BLUE_INVERTED);
-  rotary_encoder_init(ROTARY_ENCODER_LOW_PIN, ROTARY_ENCODER_SM);
+  rotary_encoder_register(RE_RED_OFFSET, RE_RED_INVERTED);
+  rotary_encoder_register(RE_GREEN_OFFSET, RE_GREEN_INVERTED);
+  rotary_encoder_register(RE_BLUE_OFFSET, RE_BLUE_INVERTED);
+  rotary_encoder_init(RE_LOW_PIN, RE_SM);
 
   uint32_t bits = 0u;
 
@@ -174,7 +174,7 @@ void rotary_encoder_task(void *parm) {
 
     log_trace("Processing Rotary Encoder input");
     for (int i=0; context && i<4; i++, bits >>= 2) {
-      context_callback_t *c = &context->callbacks->re[i];
+      context_callback_t *c = &context->re_ccb[i];
       if(!c->callback || !(bits & 3u)) continue;
       v32_t delta = (v32_t)((int32_t)0);
       if(bits & 1u) delta.s=1;

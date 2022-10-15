@@ -68,10 +68,17 @@ void log_lock(bool acq, void *data) {
   else xSemaphoreGive((SemaphoreHandle_t)data);
 }
 
+void init_task(void *v) {
+
+  note_color_init();
+
+  context_push(  note_color_menu_alloc(), NULL );
+
+  vTaskDelete(NULL);
+}
+
 task_list_t tasks;
 int main() {
-  static context_t menu_context; /* TEMPORARY */
-
   stdio_init_all();
 #if LIB_PICO_STDIO_USB && !defined(NDEBUG)
   while (!stdio_usb_connected()) { sleep_ms(100); }
@@ -91,11 +98,13 @@ int main() {
   gpio_pull_up(SCREEN_SDA_PIN);
   gpio_pull_up(SCREEN_SCL_PIN);
 
-  note_color_init();
 
   /*
    * Start the tasks
    */
+  xTaskCreate(init_task, "Init",
+      configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 3, NULL);
+
   xTaskCreate(rotary_encoder_task, "Rotary Encoders Task",
       configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 2, &tasks.rotary_encoders);
 
@@ -104,10 +113,6 @@ int main() {
 
   xTaskCreate(context_display_task, "Display Task",
       configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, &tasks.display);
-
-  note_color_menu_init(&menu_context);
-
-  context_push(&menu_context, NULL);
 
   vTaskStartScheduler();
 

@@ -23,6 +23,8 @@
 
 #include "pico/stdlib.h"
 
+#include "context.h"
+
 #ifndef __NOTE_COLOR_H
 #define __NOTE_COLOR_H
 
@@ -34,14 +36,9 @@ extern "C" {
 
 typedef struct note_color note_color_t;
 
-const char *note_color_note_name_i(uint8_t i);
-const char *note_color_note_name(note_color_t *n);
-uint32_t *note_color_rgb_i(uint8_t i);
-uint32_t *note_color_rgb(note_color_t *n);
-note_color_t *note_color_ptr_i(uint8_t i);
-
 void note_color_init();
-void note_color_menu_init(context_t *c);
+context_t *chord_init();
+context_t *note_color_menu_alloc();
 
 #ifdef __cplusplus
 }

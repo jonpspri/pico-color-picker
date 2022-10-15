@@ -95,7 +95,6 @@ add_executable(pico_color_picker
   bitmap.c
   bitmap_ssd1306.c
   button.c
-  chord.c
   context.c
   input.c
   log.c
@@ -138,19 +137,17 @@ target_compile_definitions(pico_color_picker PRIVATE
   IO_DEVICES_PIO=1
   IO_PIO_SLOTS=8
 
-  ROTARY_ENCODER_COUNT=3;
-  ROTARY_ENCODER_SM=0
-  ROTARY_ENCODER_DIVISOR=4
-  ROTARY_ENCODER_LOW_PIN=14
+  RE_SM=0
+  RE_DIVISOR=4  # Number of transitions/detent on the RE
+  RE_LOW_PIN=14
 
-  ROTARY_ENCODER_RED_OFFSET=0
-  ROTARY_ENCODER_RED_INVERTED=false
-  ROTARY_ENCODER_GREEN_OFFSET=1
-  ROTARY_ENCODER_GREEN_INVERTED=true
-  ROTARY_ENCODER_BLUE_OFFSET=3
-  ROTARY_ENCODER_BLUE_INVERTED=false
+  RE_RED_OFFSET=0
+  RE_RED_INVERTED=false
+  RE_GREEN_OFFSET=1
+  RE_GREEN_INVERTED=true  # The A and C wires are "backwards" compared to the pin order
+  RE_BLUE_OFFSET=3
+  RE_BLUE_INVERTED=false
 
-  BUTTON_COUNT=2
   BUTTON_SM=1
   BUTTON_LOW_PIN=6
 
