@@ -39,6 +39,7 @@
 #include "note_color.h"
 
 #define CELL_WIDTH ( RE_LABEL_TOTAL_WIDTH / 3 )
+#define CELL_HEIGHT ( TRIPLE_LINE_TEXT_FONT.Height )
 
 /* ---------------------------------------------------------------------- */
 
@@ -72,13 +73,6 @@ typedef struct rgb_encoder_frame {
     uint8_t cursor;
 } rgb_encoder_frame_t;
 
-typedef struct chord chord_t;
-struct chord {
-    pcp_t pcp;
-    note_color_t *note_colors[3];
-    context_leds_t leds;
-};
-
 /* ---------------------------------------------------------------------- */
 
 #define NOTE_COUNT 12
@@ -99,14 +93,12 @@ static note_color_t note_colors[NOTE_COUNT];
 
 static context_leds_t rgbe_leds;
 
-static chord_t chord;
-
 /* ---------------------------------------------------------------------- */
 
 static rgb_encoder_frame_t *s_rgb_encoder_frame_alloc(
         void ( *line1 )(menu_t *, uint8_t), menu_t *menu, uint8_t cursor)
 {
-    rgb_encoder_frame_t *f = pcp_zero_malloc( sizeof( rgb_encoder_frame_t ) );
+    rgb_encoder_frame_t *f = pcp_zero_malloc(sizeof( rgb_encoder_frame_t ) );
     f->pcp.magic_number = RGB_ENCODER_FRAME_T | FREEABLE_P;
     f->pcp.free_f = vPortFree;
     f->pcp.autofree_p = true;
@@ -122,9 +114,9 @@ static uint32_t s_rgbes_value(rgb_encoders_data_t *re)
     uint32_t rgb = 0u;
     xSemaphoreTake(re->rgbe_mutex, portMAX_DELAY);
     for (int i = 0; i<4; i++) {
-        if (!re->rgb_encoders[i].active)
-            continue;
-        rgb |= re->rgb_encoders[i].value << re->rgb_encoders[i].shift;
+        if (re->rgb_encoders[i].active) {
+            rgb |= re->rgb_encoders[i].value << re->rgb_encoders[i].shift;
+        }
     }
     xSemaphoreGive(re->rgbe_mutex);
     return rgb;
@@ -146,7 +138,7 @@ static void s_rgbes_re_callback(context_t *c, void *re_v, v32_t delta)
 
     rgb_encoders_data_t *red = (rgb_encoders_data_t *) c->data;
     ASSERT_IS_A(red, RGB_ENCODERS_DATA_T);
-    *red->rgb = s_rgbes_value( (rgb_encoders_data_t *) c->data );
+    *red->rgb = s_rgbes_value( (rgb_encoders_data_t *) c->data);
 
     log_trace("RGB Encoder new value %02x", re->value);
 }; /* s_rgbes_re_callback */
@@ -158,13 +150,12 @@ static void s_rgbe_display_callback(context_t *c, void *data, v32_t v)
 
     log_trace("Entering RGB Encoder s_rgbe_display_callback");
 
-    if (c == context_current() ) {
-        f = (rgb_encoder_frame_t *) context_frame_data();
-        if (f)
-            ASSERT_IS_A(f, RGB_ENCODER_FRAME_T);
-    } else {
+    f = (rgb_encoder_frame_t *) context_frame_data();
+    ASSERT_IS_A(f, RGB_ENCODER_FRAME_T);
+
+    if ( c != context_current() ) {
+        log_warn("Context mismatch: %p vs %p (frame %p)", c, context_current(), f);
         f = NULL;
-        log_warn( "Context mismatch: %lx vs %lx", c, context_current() );
     }
 
     rgb_encoders_data_t *re = ( (rgb_encoders_data_t *) c->data );
@@ -178,8 +169,9 @@ static void s_rgbe_display_callback(context_t *c, void *data, v32_t v)
 
     sprintf(hex_color_value, "#%06lx", (unsigned long) *re->rgb);
 
-    if (f)
+    if (f) {
         f->line1(f->menu, f->cursor);
+    }
     bitmap_draw_string(context_get_drawing_pane(c), 0,
             TRIPLE_LINE_TEXT_FONT.Height, &DOUBLE_LINE_TEXT_FONT,
             hex_color_value
@@ -192,7 +184,7 @@ static context_t *s_rgbe_init(uint32_t *rgb)
      *  Step 1 - Initialize the underlying data storage object for the context
      */
     rgb_encoders_data_t *rgbes =
-        pcp_zero_malloc( sizeof( rgb_encoders_data_t ) );
+        pcp_zero_malloc(sizeof( rgb_encoders_data_t ) );
     rgbes->pcp.magic_number = RGB_ENCODERS_DATA_T | FREEABLE_P;
     rgbes->pcp.free_f = vPortFree;
     rgbes->pcp.autofree_p = true;
@@ -246,7 +238,6 @@ static context_t *s_rgbe_init(uint32_t *rgb)
     return context_builder_finalize();
 } /* s_rgbe_init */
 
-
 static void s_menu_render_item_callback(menu_item_t *item,
         bitmap_t *item_bitmap, uint8_t cursor)
 {
@@ -283,11 +274,19 @@ static void s_menu_line1_render_callback(menu_t *m, uint8_t cursor)
 
 static void s_chord_line1_render_callback(menu_t *m, uint8_t cursor)
 {
-    /* TODO: Change the rendering */
-    s_menu_render_item_callback(menu_item_at_cursor(m, cursor, 0),
-            context_get_drawing_pane(NULL), cursor
-            );
-}
+    static bitmap_t *item_bitmap;
+    if (!item_bitmap) {
+        item_bitmap = bitmap_alloc(CELL_WIDTH, CELL_HEIGHT, NULL);
+    }
+
+    for (uint8_t i = 0; i<3; i++) {
+        s_chord_render_item_callback(menu_item_at_cursor(m, cursor, 0), item_bitmap, cursor);
+        if (i == cursor) {
+            bitmap_invert(item_bitmap);
+        }
+        bitmap_copy_from(context_get_drawing_pane(NULL), item_bitmap, CELL_WIDTH * i, 0);
+    }
+} /* s_chord_line1_render_callback */
 
 static void s_menu_selection_changed_callback(menu_t *menu)
 {
@@ -350,7 +349,7 @@ context_t *note_color_menu_alloc()
     return menu_builder_finalize();
 } /* note_color_menu_alloc */
 
-context_t *chord_menu_alloc()
+context_t *note_color_chord_alloc()
 {
     menu_builder_init(3, NOTE_COUNT);
 
@@ -359,8 +358,8 @@ context_t *chord_menu_alloc()
         menu_builder_set_item_data(i, &note_colors[i]);
     }
     for (uint8_t i = 0; i<3; i++) {
-        menu_builder_set_cursor_enter_data(0,
-                s_rgb_encoder_frame_alloc(s_menu_line1_render_callback,
+        menu_builder_set_cursor_enter_data(i,
+                s_rgb_encoder_frame_alloc(s_chord_line1_render_callback,
                         menu_builder_menu_ptr(), i
                         )
                 );

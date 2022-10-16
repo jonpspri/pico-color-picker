@@ -72,7 +72,7 @@ void init_task(void *v) {
 
   note_color_init();
 
-  context_push(  note_color_menu_alloc(), NULL );
+  context_push(  note_color_chord_alloc(), NULL );
 
   vTaskDelete(NULL);
 }

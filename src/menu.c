@@ -55,17 +55,6 @@ struct menu {
     void (*render_item_cb)(menu_item_t *item, bitmap_t *b, uint8_t cursor);
 };
 
-static const uint8_t re_offsets[] = {
-    RE_RED_OFFSET,
-    RE_GREEN_OFFSET,
-    RE_BLUE_OFFSET
-};
-
-static const uint8_t re_button_offsets[] = {
-    BUTTON_RED_OFFSET,
-    BUTTON_GREEN_OFFSET,
-    BUTTON_BLUE_OFFSET
-};
 /* ------------------------------ Callbacks ------------------------- */
 
 static void s_menu_re_callback(context_t *c, void *data, v32_t v)
@@ -99,7 +88,7 @@ static void s_menu_ui_callback(context_t *c, void *data, v32_t v)
             );
 
     for (uint8_t cursor = 0; cursor < menu->cursor_count; cursor++) {
-        uint8_t offset = ( menu->cursors[0].cursor_at + menu->item_count - 1 ) %
+        uint8_t offset = ( menu->cursors[cursor].cursor_at + menu->item_count - 1 ) %
                          menu->item_count;
         bitmap_clear(item_bitmap);
         menu->render_item_cb(&menu->items[offset], item_bitmap, cursor);
@@ -135,16 +124,16 @@ static void s_button_forward_callback(context_t *c, void *data, v32_t value)
     cursor_t *cursor = (cursor_t *) data;
     ASSERT_IS_A(cursor, CURSOR_T);
 
-    if (!value.u) {
-        return;
+    if (value.u) {
+        /* Only push the context on the press-down, not the release */
+        log_trace("About to push context, data:  %p %p",
+                cursor->menu->items[cursor->cursor_at].enter_ctx,
+                cursor->enter_data
+                );
+        context_push(cursor->menu->items[cursor->cursor_at].enter_ctx,
+                cursor->enter_data
+                );
     }
-    log_trace("About to push context, data:  %lx %lx",
-            cursor->menu->items[cursor->cursor_at].enter_ctx,
-            cursor->enter_data
-            );
-    context_push(cursor->menu->items[cursor->cursor_at].enter_ctx,
-            cursor->enter_data
-            );
 } /* s_button_forward_callback */
 
 /* ---------------------------------------------------------------------- */
@@ -189,10 +178,9 @@ void s_menu_free(void *v)
 void menu_builder_init(uint8_t cursors, uint8_t items)
 {
     assert(cursors <= CURSOR_MAX);
-    assert(cursors == 1); /* For now */
     assert(items <= ITEM_MAX);
 
-    menu_t *m = pcp_zero_malloc(sizeof( menu_t ) );
+    menu_t *m = pcp_zero_malloc( sizeof( menu_t ) );
     m->pcp.magic_number = MENU_T;
     m->pcp.free_f = s_menu_free;
     m->pcp.autofree_p = true;
@@ -265,7 +253,7 @@ void menu_builder_set_item_data(uint8_t item, void *data)
 }
 
 
-void menu_builder_set_selection_changed_cb(void ( *f )(menu_t *) )
+void menu_builder_set_selection_changed_cb( void ( *f )(menu_t *) )
 {
     menu_t *m = (menu_t *) pvTaskGetThreadLocalStoragePointer(NULL,
             ThLS_BLDR_MENU
@@ -274,7 +262,7 @@ void menu_builder_set_selection_changed_cb(void ( *f )(menu_t *) )
     m->selection_changed_cb = f;
 }
 
-void menu_builder_set_render_item_cb(void ( *f )(menu_item_t *,
+void menu_builder_set_render_item_cb( void ( *f )(menu_item_t *,
         bitmap_t *,
         uint8_t
         ) )

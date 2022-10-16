@@ -37,7 +37,7 @@ extern "C" {
 typedef struct note_color note_color_t;
 
 void note_color_init();
-context_t *chord_init();
+context_t *note_color_chord_alloc();
 context_t *note_color_menu_alloc();
 
 #ifdef __cplusplus

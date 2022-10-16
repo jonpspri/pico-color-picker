@@ -107,4 +107,21 @@ static inline void pcp_free(void *v) {
 
 static inline void *pcp_zero_malloc(size_t s) { return memset(pvPortMalloc(s),0,s); }
 
+
+/* ----------------------------------------------------------------------- */
+
+/* USEFUL CONSTANTS */
+
+static const uint8_t re_offsets[] = {
+    RE_RED_OFFSET,
+    RE_GREEN_OFFSET,
+    RE_BLUE_OFFSET
+};
+
+static const uint8_t re_button_offsets[] = {
+    BUTTON_RED_OFFSET,
+    BUTTON_GREEN_OFFSET,
+    BUTTON_BLUE_OFFSET
+};
+
 #endif /* __PCP_H */
