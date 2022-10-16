@@ -168,7 +168,7 @@ target_compile_definitions(pico_color_picker PRIVATE
   SCREEN_HEIGHT=32
 
   LOG_USE_COLOR
-  LOG_LEVEL=LOG_TRACE
+  LOG_LEVEL=$<IF:$<CONFIG:Debug>,LOG_TRACE,LOG_WARN>
   PICO_DEBUG_MALLOC
   )
 

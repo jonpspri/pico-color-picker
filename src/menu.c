@@ -76,11 +76,10 @@ static void s_menu_ui_callback(context_t *c, void *data, v32_t v)
     ASSERT_IS_A(menu, MENU_T);
 
     bitmap_t *pane = context_get_drawing_pane(c);
+    uint8_t height = c->use_labels ? RE_LABEL_Y_OFFSET : SCREEN_HEIGHT;
+
     if (!item_bitmap) {
-        item_bitmap = bitmap_alloc(pane->width / menu->cursor_count,
-                pane->height / 3,
-                NULL
-                );
+        item_bitmap = bitmap_alloc(pane->width / menu->cursor_count, height / 3, NULL);
     }
 
     context_set_upper_button_char(c,
@@ -92,30 +91,18 @@ static void s_menu_ui_callback(context_t *c, void *data, v32_t v)
                          menu->item_count;
         bitmap_clear(item_bitmap);
         menu->render_item_cb(&menu->items[offset], item_bitmap, cursor);
-        bitmap_copy_from(pane,
-                item_bitmap,
-                cursor * item_bitmap->width,
-                0
-                );
+        bitmap_copy_from(pane, item_bitmap, cursor * item_bitmap->width, 0);
 
         bitmap_clear(item_bitmap);
         offset = ( offset + 1 ) % menu->item_count;
         menu->render_item_cb(&menu->items[offset], item_bitmap, cursor);
         bitmap_invert(item_bitmap);
-        bitmap_copy_from(pane,
-                item_bitmap,
-                cursor * item_bitmap->width,
-                pane->height / 3
-                );
+        bitmap_copy_from(pane, item_bitmap, cursor * item_bitmap->width, height / 3);
 
         bitmap_clear(item_bitmap);
         offset = ( offset + 1 ) % menu->item_count;
         menu->render_item_cb(&menu->items[offset], item_bitmap, cursor);
-        bitmap_copy_from(pane,
-                item_bitmap,
-                cursor * item_bitmap->width,
-                2 * pane->height / 3
-                );
+        bitmap_copy_from(pane, item_bitmap, cursor * item_bitmap->width, 2*height / 3);
     }
 } /* s_menu_ui_callback */
 
@@ -190,16 +177,14 @@ void menu_builder_init(uint8_t cursors, uint8_t items)
 
     context_builder_init();
 
-    char label[16];
     for (uint8_t i = 0; i<cursors; i++) {
         m->cursors[i].magic_number = CURSOR_T;
         m->cursors[i].menu = m;
 
-        snprintf(label, 15, "Cursor %1d", i);
         context_builder_set_re(re_offsets[i], re_button_offsets[i],
                 s_menu_re_callback, &m->cursors[i],
                 s_button_forward_callback, &m->cursors[i],
-                label
+                NULL
                 );
     }
 
@@ -207,6 +192,7 @@ void menu_builder_init(uint8_t cursors, uint8_t items)
         context_builder_set_lower_button(s_button_forward_callback,
                 &m->cursors[0], RAQUO
                 );
+        context_builder_set_re_label(RE_RED_OFFSET, "Cursor");
     }
     ;
 
@@ -243,9 +229,7 @@ void menu_builder_set_item_enter_ctx(uint8_t item, context_t *ctx)
 
 void menu_builder_set_item_data(uint8_t item, void *data)
 {
-    menu_t *m = (menu_t *) pvTaskGetThreadLocalStoragePointer(NULL,
-            ThLS_BLDR_MENU
-            );
+    menu_t *m = (menu_t *) pvTaskGetThreadLocalStoragePointer(NULL, ThLS_BLDR_MENU);
     ASSERT_IS_A(m, MENU_T);
     assert(item < m->item_count);
 
@@ -255,39 +239,28 @@ void menu_builder_set_item_data(uint8_t item, void *data)
 
 void menu_builder_set_selection_changed_cb( void ( *f )(menu_t *) )
 {
-    menu_t *m = (menu_t *) pvTaskGetThreadLocalStoragePointer(NULL,
-            ThLS_BLDR_MENU
-            );
+    menu_t *m = (menu_t *) pvTaskGetThreadLocalStoragePointer(NULL, ThLS_BLDR_MENU);
     ASSERT_IS_A(m, MENU_T);
     m->selection_changed_cb = f;
 }
 
-void menu_builder_set_render_item_cb( void ( *f )(menu_item_t *,
-        bitmap_t *,
-        uint8_t
-        ) )
+void menu_builder_set_render_item_cb( void ( *f )(menu_item_t *, bitmap_t *, uint8_t) )
 {
-    menu_t *m = (menu_t *) pvTaskGetThreadLocalStoragePointer(NULL,
-            ThLS_BLDR_MENU
-            );
+    menu_t *m = (menu_t *) pvTaskGetThreadLocalStoragePointer(NULL, ThLS_BLDR_MENU);
     ASSERT_IS_A(m, MENU_T);
     m->render_item_cb = f;
 }
 
 menu_t *menu_builder_menu_ptr()
 {
-    menu_t *m = (menu_t *) pvTaskGetThreadLocalStoragePointer(NULL,
-            ThLS_BLDR_MENU
-            );
+    menu_t *m = (menu_t *) pvTaskGetThreadLocalStoragePointer(NULL, ThLS_BLDR_MENU);
     ASSERT_IS_A(m, MENU_T);
     return m;
 }
 
 context_t *menu_builder_finalize()
 {
-    menu_t *m = (menu_t *) pvTaskGetThreadLocalStoragePointer(NULL,
-            ThLS_BLDR_MENU
-            );
+    menu_t *m = (menu_t *) pvTaskGetThreadLocalStoragePointer(NULL, ThLS_BLDR_MENU);
     ASSERT_IS_A(m, MENU_T);
     if (m->selection_changed_cb) {
         m->selection_changed_cb(m);

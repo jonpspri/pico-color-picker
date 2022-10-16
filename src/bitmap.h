@@ -1,9 +1,8 @@
-/* vim: set ft=cpp:
- *
+/*
  * SPDX-FileCopyrightText: 2022 Jonathan Springer
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
-
+ *
  * This file is part of pico-color-picker.
  *
  * pico-color-picker is free software: you can redistribute it and/or modify it under the
@@ -61,6 +60,7 @@ void bitmap_draw_empty_square(bitmap_t *, uint32_t x, uint32_t y, uint32_t width
 void bitmap_draw_square(bitmap_t *, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
 void bitmap_draw_string(bitmap_t *, uint32_t x, uint32_t y, const struct bitmap_font *font, const char *);
 
+void bitmap_copy_from_bound(bitmap_t *, bitmap_t *, uint32_t x, uint32_t y, uint32_t widht, uint32_t height);
 void bitmap_copy_from(bitmap_t *, bitmap_t *, uint32_t x, uint32_t y);
 
 static inline void bitmap_invert(bitmap_t *b) { b->inverted = !b->inverted; }

@@ -257,11 +257,12 @@ static void s_chord_render_item_callback(menu_item_t *item,
     note_color_t *nc = (note_color_t *) menu_item_data(item);
     ASSERT_IS_A(nc, NOTE_COLOR_T);
 
+    const font_t *font = context_current()->use_labels ? &TRIPLE_LINE_TEXT_FONT : &P10_FONT;
+
     bitmap_clear(item_bitmap);
     bitmap_draw_string(item_bitmap,
-            ( item_bitmap->width - strlen(nc->note_name) *
-              TRIPLE_LINE_TEXT_FONT.Width ) / 2,
-            0, &TRIPLE_LINE_TEXT_FONT, nc->note_name
+            ( item_bitmap->width - strlen(nc->note_name) * font->Width ) / 2,
+            0, font, nc->note_name
             );
 } /* s_chord_render_item_callback */
 

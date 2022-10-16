@@ -90,6 +90,7 @@ struct context {
 
     context_callback_t re_ccb[IO_PIO_SLOTS/2];
     char re_labels[IO_PIO_SLOTS/2][RE_LABEL_LEN + 1];
+    bool use_labels;
     context_callback_t button_ccb[IO_PIO_SLOTS];
     uint16_t button_chars[IO_PIO_SLOTS];
 
@@ -169,6 +170,7 @@ static inline void context_builder_set_blue_re(
             re_data, button_callback, button_data, label
             );
 }
+void context_builder_set_re_label(uint8_t re_offset, const char *label);
 
 void context_builder_set_button(uint8_t offset, context_callback_f callback,
         void *data, int16_t label);

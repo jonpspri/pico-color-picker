@@ -100,37 +100,48 @@ static void context_free(void *v)
 
 void context_builder_init()
 {
-    assert( !pvTaskGetThreadLocalStoragePointer(NULL, ThLS_BLDR_CTX) );
-    context_t *context = pcp_zero_malloc( sizeof( context_t ) );
+    assert(!pvTaskGetThreadLocalStoragePointer(NULL, ThLS_BLDR_CTX) );
+    context_t *context = pcp_zero_malloc(sizeof( context_t ) );
     context->pcp.magic_number = CONTEXT_T;
     context->pcp.free_f = context_free;
     for (uint8_t i = 0; i<IO_PIO_SLOTS; i++) {context->button_chars[i] = 32;}
-    context->pane = bitmap_alloc(RE_LABEL_TOTAL_WIDTH, RE_LABEL_Y_OFFSET, NULL);
+    context->pane = bitmap_alloc(RE_LABEL_TOTAL_WIDTH, SCREEN_HEIGHT, NULL);
     vTaskSetThreadLocalStoragePointer(NULL, ThLS_BLDR_CTX, context);
+}
+
+void context_builder_set_re_label(uint8_t re_offset, const char *label) {
+    context_t *c = (context_t *) pvTaskGetThreadLocalStoragePointer(NULL, ThLS_BLDR_CTX);
+    ASSERT_IS_A(c, CONTEXT_T);
+    assert(re_offset < IO_PIO_SLOTS/2);
+
+    if (label) {
+        strncat(c->re_labels[re_offset], label, RE_LABEL_LEN);
+        c->use_labels = true;
+    }
 }
 
 void context_builder_set_re(uint8_t re_offset, uint8_t button_offset,
         context_callback_f re_callback, void *re_data, context_callback_f
         button_callback, void *button_data, const char *label)
 {
-    context_t *c = (context_t *) pvTaskGetThreadLocalStoragePointer(NULL,
-            ThLS_BLDR_CTX
-            );
+    context_t *c = (context_t *) pvTaskGetThreadLocalStoragePointer(NULL, ThLS_BLDR_CTX);
     ASSERT_IS_A(c, CONTEXT_T);
+    assert(re_offset < IO_PIO_SLOTS/2);
+
     c->re_ccb[re_offset].callback = re_callback;
     c->re_ccb[re_offset].data = re_data;
     c->button_ccb[button_offset].callback = button_callback;
     c->button_ccb[button_offset].data = button_data;
-    strncat(c->re_labels[re_offset], label, RE_LABEL_LEN);
+
+    context_builder_set_re_label(re_offset, label);
 } /* context_builder_set_re */
 
 void context_builder_set_button(uint8_t offset, context_callback_f callback,
         void *data, int16_t label)
 {
-    context_t *c = (context_t *) pvTaskGetThreadLocalStoragePointer(NULL,
-            ThLS_BLDR_CTX
-            );
+    context_t *c = (context_t *) pvTaskGetThreadLocalStoragePointer(NULL, ThLS_BLDR_CTX);
     ASSERT_IS_A(c, CONTEXT_T);
+
     c->button_ccb[offset].callback = callback;
     c->button_ccb[offset].data = data;
     c->button_chars[offset] = label;
@@ -205,10 +216,10 @@ void context_display_task(void *parm)
     }
 
     bitmap_clear(screen_buffer);
-    ssd1306_show( (ssd1306_t *) screen_buffer->buffer );
+    ssd1306_show( (ssd1306_t *) screen_buffer->buffer);
 
     for ( ;;) {
-        while ( !xTaskNotifyWaitIndexed(NTFCN_IDX_EVENT, 0u, 0xFFFFFFFFu,
+        while (!xTaskNotifyWaitIndexed(NTFCN_IDX_EVENT, 0u, 0xFFFFFFFFu,
                 (uint32_t *) ( &c ), portMAX_DELAY
                 ) ) {;}
 
@@ -218,7 +229,7 @@ void context_display_task(void *parm)
 
         ASSERT_IS_A(c, CONTEXT_T);
 
-        if ( !( c->display_ccb.callback ) ) {
+        if (!( c->display_ccb.callback ) ) {
             continue;
         }
         bitmap_clear(c->pane);
@@ -231,24 +242,27 @@ void context_display_task(void *parm)
         /* If an assert fails in the xSemaphoreTake, it likely means the ContextScreen is corrupt */
         bitmap_clear(screen_buffer);
 
-        bitmap_copy_from(screen_buffer, c->pane, 0, 0);
-        bitmap_draw_string(screen_buffer, 0, RE_LABEL_Y_OFFSET,
-                &TRIPLE_LINE_TEXT_FONT, c->re_labels[re_offsets[0]]
-                );
-        bitmap_draw_string(screen_buffer,
-                ( RE_LABEL_TOTAL_WIDTH - TRIPLE_LINE_TEXT_FONT.Width *
-                  strnlen(c->re_labels[re_offsets[2]],
-                          8
-                          ) ) / 2,
-                RE_LABEL_Y_OFFSET,
-                &TRIPLE_LINE_TEXT_FONT,
-                c->re_labels[re_offsets[1]]
-                );
-        bitmap_draw_string(screen_buffer,
-                RE_LABEL_TOTAL_WIDTH - TRIPLE_LINE_TEXT_FONT.Width *
-                strnlen(c->re_labels[re_offsets[2]],8),
-                RE_LABEL_Y_OFFSET, &TRIPLE_LINE_TEXT_FONT, c->re_labels[re_offsets[2]]
-                );
+        bitmap_copy_from_bound(screen_buffer, c->pane, 0, 0, c->pane->width,
+                c->use_labels ? RE_LABEL_Y_OFFSET : c->pane->height);
+        if (c->use_labels) {
+            bitmap_draw_string(screen_buffer, 0, RE_LABEL_Y_OFFSET,
+                    &TRIPLE_LINE_TEXT_FONT, c->re_labels[re_offsets[0]]
+                    );
+            bitmap_draw_string(screen_buffer,
+                    ( RE_LABEL_TOTAL_WIDTH - TRIPLE_LINE_TEXT_FONT.Width *
+                      strnlen(c->re_labels[re_offsets[2]],
+                              8
+                              ) ) / 2,
+                    RE_LABEL_Y_OFFSET,
+                    &TRIPLE_LINE_TEXT_FONT,
+                    c->re_labels[re_offsets[1]]
+                    );
+            bitmap_draw_string(screen_buffer,
+                    RE_LABEL_TOTAL_WIDTH - TRIPLE_LINE_TEXT_FONT.Width *
+                    strnlen(c->re_labels[re_offsets[2]],8),
+                    RE_LABEL_Y_OFFSET, &TRIPLE_LINE_TEXT_FONT, c->re_labels[re_offsets[2]]
+                    );
+        }
 
         /*
          * Draw the chevrons if they're there
@@ -260,7 +274,7 @@ void context_display_task(void *parm)
                 BUTTON_LABEL_FONT.Height, &BUTTON_LABEL_FONT, c->button_chars[1]
                 );
 
-        ssd1306_show( (ssd1306_t *) screen_buffer->buffer );
+        ssd1306_show( (ssd1306_t *) screen_buffer->buffer);
     }
 } /* context_display_task */
 
@@ -300,7 +314,7 @@ context_t *context_pop()
     context_frame_t f;
     BaseType_t success = xQueueReceive(context_stack, &f, 0);
     assert(success == pdTRUE);
-    s_context_enable( context_current() );
+    s_context_enable(context_current() );
     return f.context;
 }
 
