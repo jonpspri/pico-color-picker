@@ -1,1 +1,10 @@
 let g:ale_c_cc_executable = '/usr/bin/arm-none-eabi-gcc'
+let g:ale_fixers = {
+\ 'c' : [
+\   'astyle',
+\   'uncrustify'
+\   ]
+\ }
+let g:ale_c_uncrustify_options = '-c '
+      \ . expand('<sfile>:h')
+      \ . '/.uncrustify.cfg'
