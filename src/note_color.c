@@ -38,7 +38,7 @@
 #include "menu.h"
 #include "note_color.h"
 
-#define CELL_WIDTH (RE_LABEL_TOTAL_WIDTH/3)
+#define CELL_WIDTH ( RE_LABEL_TOTAL_WIDTH / 3 )
 
 /* ---------------------------------------------------------------------- */
 
@@ -62,12 +62,12 @@ typedef struct rgb_encoders_data {
     pcp_t pcp;
     SemaphoreHandle_t rgbe_mutex;
     uint32_t *rgb;
-    rgb_encoder_t rgb_encoders[IO_PIO_SLOTS/2]; /*  We waste storage to simplify lookup.  Maybe not necessary with callbacks?  */
+    rgb_encoder_t rgb_encoders[IO_PIO_SLOTS / 2]; /*  We waste storage to simplify lookup.  Maybe not necessary with callbacks?  */
 } rgb_encoders_data_t;
 
 typedef struct rgb_encoder_frame {
     pcp_t pcp;
-    void (*line1)(menu_t *, uint8_t);
+    void ( *line1 )(menu_t *, uint8_t);
     menu_t *menu;
     uint8_t cursor;
 } rgb_encoder_frame_t;
@@ -104,9 +104,9 @@ static chord_t chord;
 /* ---------------------------------------------------------------------- */
 
 static rgb_encoder_frame_t *s_rgb_encoder_frame_alloc(
-        void (*line1)(menu_t *, uint8_t), menu_t *menu, uint8_t cursor)
+        void ( *line1 )(menu_t *, uint8_t), menu_t *menu, uint8_t cursor)
 {
-    rgb_encoder_frame_t *f = pcp_zero_malloc( sizeof(rgb_encoder_frame_t) );
+    rgb_encoder_frame_t *f = pcp_zero_malloc( sizeof( rgb_encoder_frame_t ) );
     f->pcp.magic_number = RGB_ENCODER_FRAME_T | FREEABLE_P;
     f->pcp.free_f = vPortFree;
     f->pcp.autofree_p = true;
@@ -119,15 +119,16 @@ static rgb_encoder_frame_t *s_rgb_encoder_frame_alloc(
 
 static uint32_t s_rgbes_value(rgb_encoders_data_t *re)
 {
-    uint32_t rgb=0u;
+    uint32_t rgb = 0u;
     xSemaphoreTake(re->rgbe_mutex, portMAX_DELAY);
-    for (int i=0; i<4; i++) {
-        if (!re->rgb_encoders[i].active) continue;
+    for (int i = 0; i<4; i++) {
+        if (!re->rgb_encoders[i].active)
+            continue;
         rgb |= re->rgb_encoders[i].value << re->rgb_encoders[i].shift;
     }
     xSemaphoreGive(re->rgbe_mutex);
     return rgb;
-}
+} /* s_rgbes_value */
 
 static void s_rgbes_re_callback(context_t *c, void *re_v, v32_t delta)
 {
@@ -159,7 +160,8 @@ static void s_rgbe_display_callback(context_t *c, void *data, v32_t v)
 
     if (c == context_current() ) {
         f = (rgb_encoder_frame_t *) context_frame_data();
-        if (f) ASSERT_IS_A(f, RGB_ENCODER_FRAME_T);
+        if (f)
+            ASSERT_IS_A(f, RGB_ENCODER_FRAME_T);
     } else {
         f = NULL;
         log_warn( "Context mismatch: %lx vs %lx", c, context_current() );
@@ -176,7 +178,8 @@ static void s_rgbe_display_callback(context_t *c, void *data, v32_t v)
 
     sprintf(hex_color_value, "#%06lx", (unsigned long) *re->rgb);
 
-    if (f) f->line1(f->menu, f->cursor);
+    if (f)
+        f->line1(f->menu, f->cursor);
     bitmap_draw_string(context_get_drawing_pane(c), 0,
             TRIPLE_LINE_TEXT_FONT.Height, &DOUBLE_LINE_TEXT_FONT,
             hex_color_value
@@ -188,12 +191,13 @@ static context_t *s_rgbe_init(uint32_t *rgb)
     /*
      *  Step 1 - Initialize the underlying data storage object for the context
      */
-    rgb_encoders_data_t *rgbes=pcp_zero_malloc( sizeof(rgb_encoders_data_t) );
+    rgb_encoders_data_t *rgbes =
+        pcp_zero_malloc( sizeof( rgb_encoders_data_t ) );
     rgbes->pcp.magic_number = RGB_ENCODERS_DATA_T | FREEABLE_P;
     rgbes->pcp.free_f = vPortFree;
     rgbes->pcp.autofree_p = true;
-    rgbes->rgbe_mutex=xSemaphoreCreateMutex();
-    rgbes->rgb=rgb;
+    rgbes->rgbe_mutex = xSemaphoreCreateMutex();
+    rgbes->rgb = rgb;
 
     log_trace("Start context build for RGB Encoder");
     context_builder_init();
@@ -244,11 +248,12 @@ static context_t *s_rgbe_init(uint32_t *rgb)
 
 
 static void s_menu_render_item_callback(menu_item_t *item,
-        bitmap_t *item_bitmap)
+        bitmap_t *item_bitmap, uint8_t cursor)
 {
     char buffer[25];
     note_color_t *nc = (note_color_t *) menu_item_data(item);
     ASSERT_IS_A(nc, NOTE_COLOR_T);
+    assert(cursor == 0);
 
     bitmap_clear(item_bitmap);
     sprintf(buffer, "%-5s #%06lx", nc->note_name, (unsigned long) nc->rgb);
@@ -256,23 +261,23 @@ static void s_menu_render_item_callback(menu_item_t *item,
 }
 
 static void s_chord_render_item_callback(menu_item_t *item,
-        bitmap_t *item_bitmap)
+        bitmap_t *item_bitmap, uint8_t cursor)
 {
     note_color_t *nc = (note_color_t *) menu_item_data(item);
     ASSERT_IS_A(nc, NOTE_COLOR_T);
 
     bitmap_clear(item_bitmap);
     bitmap_draw_string(item_bitmap,
-            (item_bitmap->width - strlen(nc->note_name)*
-             TRIPLE_LINE_TEXT_FONT.Width)/2,
+            ( item_bitmap->width - strlen(nc->note_name) *
+              TRIPLE_LINE_TEXT_FONT.Width ) / 2,
             0, &TRIPLE_LINE_TEXT_FONT, nc->note_name
             );
-}
+} /* s_chord_render_item_callback */
 
 static void s_menu_line1_render_callback(menu_t *m, uint8_t cursor)
 {
     s_menu_render_item_callback(menu_item_at_cursor(m, cursor, 0),
-            context_get_drawing_pane(NULL)
+            context_get_drawing_pane(NULL), cursor
             );
 }
 
@@ -280,7 +285,7 @@ static void s_chord_line1_render_callback(menu_t *m, uint8_t cursor)
 {
     /* TODO: Change the rendering */
     s_menu_render_item_callback(menu_item_at_cursor(m, cursor, 0),
-            context_get_drawing_pane(NULL)
+            context_get_drawing_pane(NULL), cursor
             );
 }
 
@@ -288,15 +293,15 @@ static void s_menu_selection_changed_callback(menu_t *menu)
 {
     rgbe_leds.magic_number = CONTEXT_LEDS_T;
     uint8_t i = menu_cursor_at(menu, 0);
-    rgbe_leds.rgb_p[0] = &note_colors[(i + NOTE_COUNT - 1) % NOTE_COUNT].rgb;
+    rgbe_leds.rgb_p[0] = &note_colors[( i + NOTE_COUNT - 1 ) % NOTE_COUNT].rgb;
     rgbe_leds.rgb_p[1] = &note_colors[i].rgb;
-    rgbe_leds.rgb_p[2] = &note_colors[(i + 1) % NOTE_COUNT].rgb;
+    rgbe_leds.rgb_p[2] = &note_colors[( i + 1 ) % NOTE_COUNT].rgb;
 }
 
 static void s_chord_selection_changed_callback(menu_t *menu)
 {
     rgbe_leds.magic_number = CONTEXT_LEDS_T;
-    for (uint8_t i=0; i<3; i++) {
+    for (uint8_t i = 0; i<3; i++) {
         rgbe_leds.rgb_p[i] = &note_colors[menu_cursor_at(menu, i)].rgb;
     }
 }
@@ -308,78 +313,11 @@ static void s_color_menu_entry(context_t *c, void *data, v32_t v)
             );
 }
 
-static note_color_t *note_color_rel(note_color_t *nc, int8_t v)
-{
-    assert(-1 <= v && v <= 1);
-    int8_t idx = nc - note_colors;
-    return &note_colors[(idx + 12 + v) % 12];
-}
-
-static void s_chord_display_callback(context_t *c, void *data, v32_t v)
-{
-    static bitmap_t *b;
-    bitmap_t *pane = context_get_drawing_pane(c);
-
-    if (!b) b = bitmap_alloc(RE_LABEL_TOTAL_WIDTH,
-            TRIPLE_LINE_TEXT_FONT.Height, NULL
-            );
-
-    for (int8_t i=-1; i<2; i++) {
-        bitmap_clear(b);
-        for (uint8_t j=0; j<3; j++) {
-            const char *n = note_color_rel(chord.note_colors[j], i)->note_name;
-            bitmap_draw_string(b,
-                    j*CELL_WIDTH + CELL_WIDTH/2 - strlen(n)*
-                    TRIPLE_LINE_TEXT_FONT.Width/2,
-                    0, &TRIPLE_LINE_TEXT_FONT, n
-                    );
-        }
-        if (i == 0) bitmap_invert(b);
-        bitmap_copy_from(pane, b, 0, (i + 1)*TRIPLE_LINE_TEXT_FONT.Height);
-    }
-} /* s_chord_display_callback */
-
-static void s_update_chord_leds()
-{
-    chord.leds.magic_number = CONTEXT_LEDS_T;
-    for (uint8_t i=0; i<3; i++) {chord.leds.rgb_p[i] =
-                                     &chord.note_colors[i]->rgb;}
-}
-
-static note_color_t *note_color_slide(note_color_t *nc, int32_t v)
-{
-    int32_t i = nc - &note_colors[0];
-    assert(0 <= i && i < 12);
-
-    i += 12 + v;
-    i %= 12;
-
-    return &note_colors[i];
-}
-
-static void s_chord_re_callback(context_t *c, void *data, v32_t v)
-{
-    note_color_t **nc_ptr = (note_color_t **) data;
-    ASSERT_IS_A(*nc_ptr, NOTE_COLOR_T);
-
-    *nc_ptr = note_color_slide(*nc_ptr, v.s);
-
-    s_update_chord_leds();
-}
-
-static void s_chord_button_callback(context_t* c, void *data, v32_t value)
-{
-    note_color_t **nc_ptr = (note_color_t **) data;
-    ASSERT_IS_A(*nc_ptr, NOTE_COLOR_T);
-
-    if (value.u) context_push( (*nc_ptr)->rgbe_ctx, 0 );
-}
-
 /* ---------------------------------------------------------------------- */
 
 void note_color_init()
 {
-    for (uint8_t i=0; i<12; i++) {
+    for (uint8_t i = 0; i<12; i++) {
         note_colors[i].magic_number = NOTE_COLOR_T;
         note_colors[i].note_name = initial_names[i];
         note_colors[i].rgb = initial_rgbs[i];
@@ -394,7 +332,7 @@ context_t *note_color_menu_alloc()
 {
     menu_builder_init(1, NOTE_COUNT);
 
-    for (uint8_t i=0; i<NOTE_COUNT; i++) {
+    for (uint8_t i = 0; i<NOTE_COUNT; i++) {
         menu_builder_set_item_enter_ctx(i, note_colors[i].rgbe_ctx);
         menu_builder_set_item_data(i, &note_colors[i]);
     }
@@ -416,11 +354,11 @@ context_t *chord_menu_alloc()
 {
     menu_builder_init(3, NOTE_COUNT);
 
-    for (uint8_t i=0; i<NOTE_COUNT; i++) {
+    for (uint8_t i = 0; i<NOTE_COUNT; i++) {
         menu_builder_set_item_enter_ctx(i, note_colors[i].rgbe_ctx);
         menu_builder_set_item_data(i, &note_colors[i]);
     }
-    for (uint8_t i=0; i<3; i++) {
+    for (uint8_t i = 0; i<3; i++) {
         menu_builder_set_cursor_enter_data(0,
                 s_rgb_encoder_frame_alloc(s_menu_line1_render_callback,
                         menu_builder_menu_ptr(), i

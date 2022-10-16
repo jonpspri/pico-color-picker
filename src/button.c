@@ -106,6 +106,11 @@ void button_task(void *parm) {
       }
     }
 
+    /* TODO:  It's possible the context has switched.  If that's the case
+     *        do we still want to handle the callbacks like this?
+     */
+
+    context = context_current();
     context_callback_t *d = context_get_display_callback(context);
     if (d) d->callback(context, d->data, (v32_t)0ul);
 

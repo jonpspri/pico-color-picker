@@ -34,8 +34,11 @@ typedef struct menu menu_t;
 
 /* Menu builder functions */
 void menu_builder_init(uint8_t cursors, uint8_t items);
-void menu_builder_set_selection_changed_cb( void (*)(menu_t *) );
-void menu_builder_set_render_item_cb( void (*)(menu_item_t *, bitmap_t *) );
+void menu_builder_set_selection_changed_cb(void ( * )(menu_t *) );
+void menu_builder_set_render_item_cb(void ( * )(menu_item_t *,
+        bitmap_t *,
+        uint8_t
+        ) );
 void menu_builder_set_item_enter_ctx(uint8_t item, context_t *ctx);
 void menu_builder_set_item_data(uint8_t item, void *data);
 void menu_builder_set_cursor_enter_data(uint8_t cursor, void *data);
@@ -55,4 +58,4 @@ menu_item_t *menu_item_at_cursor(menu_t *, uint8_t cursor, int8_t offset);
 }
 #endif
 
-#endif
+#endif /* ifndef __MENU_H */
