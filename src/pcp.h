@@ -72,6 +72,7 @@ typedef void (*context_callback_f)(context_t *c, void *, v32_t);
 #define RGB_ENCODER_FRAME_T  10  /* Freeable */
 #define BITMAP_T             11  /* Freeable */
 #define CURSOR_T             12  /* Embedded in MENU_T */
+#define MENU_STRING_T      ( 13 | FREEABLE_P )
 
 #define FREEABLE_P          ( 1u << 31 )
 

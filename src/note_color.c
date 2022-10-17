@@ -281,7 +281,7 @@ static void s_chord_line1_render_callback(menu_t *m, uint8_t cursor)
     }
 
     for (uint8_t i = 0; i<3; i++) {
-        s_chord_render_item_callback(menu_item_at_cursor(m, cursor, 0), item_bitmap, cursor);
+        s_chord_render_item_callback(menu_item_at_cursor(m, i, 0), item_bitmap, i);
         if (i == cursor) {
             bitmap_invert(item_bitmap);
         }
@@ -346,6 +346,7 @@ context_t *note_color_menu_alloc()
     menu_builder_set_render_item_cb(s_menu_render_item_callback);
     menu_builder_set_selection_changed_cb(s_menu_selection_changed_callback);
     context_builder_set_enable_callback(s_color_menu_entry, 0);
+    context_builder_set_upper_button(button_return_callback, NULL, LAQUO);
 
     return menu_builder_finalize();
 } /* note_color_menu_alloc */
@@ -369,6 +370,7 @@ context_t *note_color_chord_alloc()
     menu_builder_set_render_item_cb(s_chord_render_item_callback);
     menu_builder_set_selection_changed_cb(s_chord_selection_changed_callback);
     context_builder_set_enable_callback(s_color_menu_entry, 0);
+    context_builder_set_upper_button(button_return_callback, NULL, LAQUO);
 
     return menu_builder_finalize();
 } /* chord_menu_alloc */

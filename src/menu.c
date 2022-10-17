@@ -55,6 +55,12 @@ struct menu {
     void (*render_item_cb)(menu_item_t *item, bitmap_t *b, uint8_t cursor);
 };
 
+typedef struct menu_string menu_string_t;
+struct menu_string {
+    pcp_t pcp;
+    const char *v;
+};
+
 /* ------------------------------ Callbacks ------------------------- */
 
 static void s_menu_re_callback(context_t *c, void *data, v32_t v)
@@ -65,26 +71,19 @@ static void s_menu_re_callback(context_t *c, void *data, v32_t v)
 
     cursor->cursor_at = ( cursor->cursor_at + menu->item_count + v.s ) %
                         menu->item_count;
-    menu->selection_changed_cb(menu);
-}
+    if (menu->selection_changed_cb) {
+        menu->selection_changed_cb(menu);
+    }
+} /* s_menu_re_callback */
 
 static void s_menu_ui_callback(context_t *c, void *data, v32_t v)
 {
-    static bitmap_t *item_bitmap;
-
     menu_t *menu = (menu_t *) data;
     ASSERT_IS_A(menu, MENU_T);
 
     bitmap_t *pane = context_get_drawing_pane(c);
     uint8_t height = c->use_labels ? RE_LABEL_Y_OFFSET : SCREEN_HEIGHT;
-
-    if (!item_bitmap) {
-        item_bitmap = bitmap_alloc(pane->width / menu->cursor_count, height / 3, NULL);
-    }
-
-    context_set_upper_button_char(c,
-            ( context_stack_depth() > 1 ) ? LAQUO : 32
-            );
+    bitmap_t *item_bitmap = bitmap_alloc(pane->width / menu->cursor_count, height / 3, NULL);
 
     for (uint8_t cursor = 0; cursor < menu->cursor_count; cursor++) {
         uint8_t offset = ( menu->cursors[cursor].cursor_at + menu->item_count - 1 ) %
@@ -102,8 +101,10 @@ static void s_menu_ui_callback(context_t *c, void *data, v32_t v)
         bitmap_clear(item_bitmap);
         offset = ( offset + 1 ) % menu->item_count;
         menu->render_item_cb(&menu->items[offset], item_bitmap, cursor);
-        bitmap_copy_from(pane, item_bitmap, cursor * item_bitmap->width, 2*height / 3);
+        bitmap_copy_from(pane, item_bitmap, cursor * item_bitmap->width, 2 * height / 3);
     }
+
+    pcp_free(item_bitmap);
 } /* s_menu_ui_callback */
 
 static void s_button_forward_callback(context_t *c, void *data, v32_t value)
@@ -141,6 +142,16 @@ menu_item_t *menu_item_at_cursor(menu_t *m, uint8_t cursor, int8_t offset)
     assert(cursor < m->cursor_count);
     return &m->items[( menu_cursor_at(m, cursor) + m->item_count + offset ) % m->item_count];
 }
+
+static menu_string_t *s_menu_string_alloc(const char *s)
+{
+    menu_string_t *m = pcp_zero_malloc(sizeof( menu_string_t ) );
+    m->pcp.magic_number = MENU_STRING_T;
+    m->pcp.free_f = vPortFree;
+    m->pcp.autofree_p = true;
+    m->v = s;
+    return m;
+};
 
 /* ---------------------------------------------------------------------- */
 
@@ -236,6 +247,11 @@ void menu_builder_set_item_data(uint8_t item, void *data)
     m->items[item].data = data;
 }
 
+void menu_builder_set_item_string(uint8_t item, const char *string)
+{
+    menu_builder_set_item_data(item, s_menu_string_alloc(string) );
+}
+
 
 void menu_builder_set_selection_changed_cb( void ( *f )(menu_t *) )
 {
@@ -268,3 +284,14 @@ context_t *menu_builder_finalize()
     vTaskSetThreadLocalStoragePointer(NULL, ThLS_BLDR_MENU, NULL);
     return context_builder_finalize();
 } /* menu_builder_finalize */
+
+void menu_item_render_string(menu_item_t *item, bitmap_t *item_bitmap, uint8_t cursor)
+{
+    menu_string_t *string = (menu_string_t *) menu_item_data(item);
+    ASSERT_IS_A(string, MENU_STRING_T);
+
+    const font_t *font = context_current()->use_labels ? &TRIPLE_LINE_TEXT_FONT : &P10_FONT;
+
+    bitmap_clear(item_bitmap);
+    bitmap_draw_string(item_bitmap, 0, 0, font, string->v);
+}

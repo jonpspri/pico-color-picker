@@ -41,6 +41,7 @@ void menu_builder_set_render_item_cb(void ( * )(menu_item_t *,
         ) );
 void menu_builder_set_item_enter_ctx(uint8_t item, context_t *ctx);
 void menu_builder_set_item_data(uint8_t item, void *data);
+void menu_builder_set_item_string(uint8_t item, const char *data);
 void menu_builder_set_cursor_enter_data(uint8_t cursor, void *data);
 menu_t *menu_builder_menu_ptr();
 
@@ -53,6 +54,7 @@ void *menu_item_data(menu_item_t *mi);
 
 uint8_t menu_cursor_at(menu_t *, uint8_t cursor);
 menu_item_t *menu_item_at_cursor(menu_t *, uint8_t cursor, int8_t offset);
+void menu_item_render_string(menu_item_t *item, bitmap_t *item_bitmap, uint8_t cursor);
 
 #ifdef __cplusplus
 }

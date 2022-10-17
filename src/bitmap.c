@@ -52,7 +52,7 @@ static void w_draw_pixel(bitmap_t *b, uint32_t x, uint32_t y, bool value)
                 b->width,
                 b->height
                 );
-        return;
+        panic("Bitmap drawing error");
     }
     uint32_t *w = &( ( (uint32_t *) b->buffer )[y * WORDS(b->width) + ( x >> 5 )] );
     if (value) {

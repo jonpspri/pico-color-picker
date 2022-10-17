@@ -210,9 +210,7 @@ void context_display_task(void *parm)
     vTaskDelay(400 / portTICK_PERIOD_MS);
 
     if (!screen_buffer) {
-        screen_buffer = bitmap_alloc(SCREEN_WIDTH, SCREEN_HEIGHT,
-                b_ssd1306_init
-                );
+        screen_buffer = bitmap_alloc(SCREEN_WIDTH, SCREEN_HEIGHT, b_ssd1306_init);
     }
 
     bitmap_clear(screen_buffer);
@@ -223,9 +221,7 @@ void context_display_task(void *parm)
                 (uint32_t *) ( &c ), portMAX_DELAY
                 ) ) {;}
 
-        xTaskNotifyWaitIndexed(NTFCN_IDX_LEDS, 0u, 0u, (uint32_t *) ( &leds ),
-                0u
-                );
+        xTaskNotifyWaitIndexed(NTFCN_IDX_LEDS, 0u, 0u, (uint32_t *) ( &leds ), 0u);
 
         ASSERT_IS_A(c, CONTEXT_T);
 
