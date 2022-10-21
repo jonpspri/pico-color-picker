@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 extern void ws2812_put_pixels(uint32_t **rgbs, uint8_t size);
-extern void ws281x_sparkle_pixels(uint16_t rgb_count, uint32_t *rgbs);
+extern void ws2813b_sparkle_pixels(uint32_t **rgbs, uint8_t size);
 extern void ws281x_pio_init();
 
 #ifdef __cplusplus

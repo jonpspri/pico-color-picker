@@ -34,19 +34,21 @@
 
 /* TYPES - to prevent circular includes */
 
+/** @brief Ease interaction with 32-bit signed numbers requiring bitwise arithmetic.
+ */
 typedef union v32 {
 #ifdef __cplusplus
-  v32(int32_t x) : s(x) { };
-  v32(uint32_t x) : u(x) { };
+    v32( int32_t x ) : s( x ) { };
+    v32( uint32_t x ) : u( x ) { };
 #endif
-  int32_t s;
-  uint32_t u;
+    int32_t s;  /**< Signed representation. */
+    uint32_t u; /**< Unsigned representation. */
 } v32_t;
 
 typedef struct bitmap bitmap_t;
 typedef struct context context_t;
 
-typedef void (*context_callback_f)(context_t *c, void *, v32_t);
+typedef void (*context_callback_f)( context_t *c, void *, v32_t );
 
 /* ----------------------------------------------------------------------- */
 
@@ -57,7 +59,9 @@ typedef void (*context_callback_f)(context_t *c, void *, v32_t);
 /* MAGIC NUMBERS */
 
 #define TYPE_FILTER         0xFF
-#define ASSERT_IS_A(x, y) assert((*((uint32_t *)(x)) & TYPE_FILTER) == ((y) & TYPE_FILTER));
+#define ASSERT_IS_A( x, \
+                     y ) assert( \
+         ( *( (uint32_t *) ( x ) ) & TYPE_FILTER ) == ( ( y ) & TYPE_FILTER ) );
 
 #define UNINITIALIZED         0
 #define CONTEXT_SCREEN_T    ( 1 | FREEABLE_P )
@@ -88,38 +92,46 @@ typedef void (*context_callback_f)(context_t *c, void *, v32_t);
 /* ----------------------------------------------------------------------- */
 
 typedef struct pcp {
-  uint32_t magic_number;
-  void (*free_f)(void *);
-  bool autofree_p;
+    uint32_t magic_number;
+    void ( *free_f )( void * );
+    bool autofree_p;
 } pcp_t;
 
-static inline void pcp_free(void *v) {
-  pcp_t *p = (pcp_t *)v;
-  if (!p->autofree_p || !(p->magic_number & FREEABLE_P)) return;
-  (p->free_f ?: vPortFree)(v);   /* GCC has the Elvis operator! */
+static inline void pcp_free( void *v )
+{
+    pcp_t *p = (pcp_t *) v;
+    if ( !p->autofree_p || !( p->magic_number & FREEABLE_P ) ) {
+        return;
+    }
+    ( p->free_f ?: vPortFree )( v ); /* GCC has the Elvis operator! */
 }
 
 /* ----------------------------------------------------------------------- */
 
 /* CONVENIENT FORMATTING EXPRESSIONS */
 
-#define RE_LABEL_Y_OFFSET (SCREEN_HEIGHT - RE_LABEL_FONT.Height)
-#define RE_LABEL_TOTAL_WIDTH (SCREEN_WIDTH - BUTTON_LABEL_FONT.Width)
+#define RE_LABEL_Y_OFFSET ( SCREEN_HEIGHT - RE_LABEL_FONT.Height )
+#define RE_LABEL_TOTAL_WIDTH ( SCREEN_WIDTH - BUTTON_LABEL_FONT.Width )
 
-static inline void *pcp_zero_malloc(size_t s) { return memset(pvPortMalloc(s),0,s); }
+static inline void *pcp_zero_malloc( size_t s )
+{
+    return memset( pvPortMalloc( s ),0,s );
+}
 
 
 /* ----------------------------------------------------------------------- */
 
 /* USEFUL CONSTANTS */
 
-static const uint8_t re_offsets[] = {
+static const uint8_t re_offsets[] =
+{
     RE_RED_OFFSET,
     RE_GREEN_OFFSET,
     RE_BLUE_OFFSET
 };
 
-static const uint8_t re_button_offsets[] = {
+static const uint8_t re_button_offsets[] =
+{
     BUTTON_RED_OFFSET,
     BUTTON_GREEN_OFFSET,
     BUTTON_BLUE_OFFSET

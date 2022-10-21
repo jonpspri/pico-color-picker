@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: 2022 Jonathan Springer
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
-
+ *
  * This file is part of pico-color-picker.
  *
  * pico-color-picker is free software: you can redistribute it and/or modify it under the
@@ -100,19 +100,22 @@ static void context_free(void *v)
 
 void context_builder_init()
 {
-    assert(!pvTaskGetThreadLocalStoragePointer(NULL, ThLS_BLDR_CTX) );
-    context_t *context = pcp_zero_malloc(sizeof( context_t ) );
+    assert( !pvTaskGetThreadLocalStoragePointer(NULL, ThLS_BLDR_CTX) );
+    context_t *context = pcp_zero_malloc( sizeof( context_t ) );
     context->pcp.magic_number = CONTEXT_T;
     context->pcp.free_f = context_free;
-    for (uint8_t i = 0; i<IO_PIO_SLOTS; i++) {context->button_chars[i] = 32;}
+    for (uint8_t i = 0; i<IO_PIO_SLOTS; i++) {
+        context->button_chars[i] = 32;
+    }
     context->pane = bitmap_alloc(RE_LABEL_TOTAL_WIDTH, SCREEN_HEIGHT, NULL);
     vTaskSetThreadLocalStoragePointer(NULL, ThLS_BLDR_CTX, context);
-}
+} /* context_builder_init */
 
-void context_builder_set_re_label(uint8_t re_offset, const char *label) {
+void context_builder_set_re_label(uint8_t re_offset, const char *label)
+{
     context_t *c = (context_t *) pvTaskGetThreadLocalStoragePointer(NULL, ThLS_BLDR_CTX);
     ASSERT_IS_A(c, CONTEXT_T);
-    assert(re_offset < IO_PIO_SLOTS/2);
+    assert(re_offset < IO_PIO_SLOTS / 2);
 
     if (label) {
         strncat(c->re_labels[re_offset], label, RE_LABEL_LEN);
@@ -126,7 +129,7 @@ void context_builder_set_re(uint8_t re_offset, uint8_t button_offset,
 {
     context_t *c = (context_t *) pvTaskGetThreadLocalStoragePointer(NULL, ThLS_BLDR_CTX);
     ASSERT_IS_A(c, CONTEXT_T);
-    assert(re_offset < IO_PIO_SLOTS/2);
+    assert(re_offset < IO_PIO_SLOTS / 2);
 
     c->re_ccb[re_offset].callback = re_callback;
     c->re_ccb[re_offset].data = re_data;
@@ -214,18 +217,20 @@ void context_display_task(void *parm)
     }
 
     bitmap_clear(screen_buffer);
-    ssd1306_show( (ssd1306_t *) screen_buffer->buffer);
+    ssd1306_show( (ssd1306_t *) screen_buffer->buffer );
 
     for ( ;;) {
-        while (!xTaskNotifyWaitIndexed(NTFCN_IDX_EVENT, 0u, 0xFFFFFFFFu,
+        while ( !xTaskNotifyWaitIndexed(NTFCN_IDX_EVENT, 0u, 0xFFFFFFFFu,
                 (uint32_t *) ( &c ), portMAX_DELAY
-                ) ) {;}
+                ) ) {
+            ;
+        }
 
         xTaskNotifyWaitIndexed(NTFCN_IDX_LEDS, 0u, 0u, (uint32_t *) ( &leds ), 0u);
 
         ASSERT_IS_A(c, CONTEXT_T);
 
-        if (!( c->display_ccb.callback ) ) {
+        if ( !( c->display_ccb.callback ) ) {
             continue;
         }
         bitmap_clear(c->pane);
@@ -233,13 +238,15 @@ void context_display_task(void *parm)
 
         if (leds) {
             ws2812_put_pixels(leds->rgb_p, 3);
+            ws2813b_sparkle_pixels(leds->rgb_p, 3);
         }
 
         /* If an assert fails in the xSemaphoreTake, it likely means the ContextScreen is corrupt */
         bitmap_clear(screen_buffer);
 
         bitmap_copy_from_bound(screen_buffer, c->pane, 0, 0, c->pane->width,
-                c->use_labels ? RE_LABEL_Y_OFFSET : c->pane->height);
+                c->use_labels ? RE_LABEL_Y_OFFSET : c->pane->height
+                );
         if (c->use_labels) {
             bitmap_draw_string(screen_buffer, 0, RE_LABEL_Y_OFFSET,
                     &TRIPLE_LINE_TEXT_FONT, c->re_labels[re_offsets[0]]
@@ -270,7 +277,7 @@ void context_display_task(void *parm)
                 BUTTON_LABEL_FONT.Height, &BUTTON_LABEL_FONT, c->button_chars[1]
                 );
 
-        ssd1306_show( (ssd1306_t *) screen_buffer->buffer);
+        ssd1306_show( (ssd1306_t *) screen_buffer->buffer );
     }
 } /* context_display_task */
 
@@ -283,7 +290,9 @@ void context_push(context_t *c, void *frame_data)
     }
     log_trace("Pushing context %lx", c);
     ASSERT_IS_A(c, CONTEXT_T); /*  Make sure the context is (somewhat) initialized  */
-    context_frame_t f = { c, frame_data };
+    context_frame_t f = {
+        c, frame_data
+    };
     BaseType_t success = xQueueSendToFront(context_stack, &f, 0);
     assert(success == pdTRUE);
     s_context_enable(c);
@@ -310,7 +319,7 @@ context_t *context_pop()
     context_frame_t f;
     BaseType_t success = xQueueReceive(context_stack, &f, 0);
     assert(success == pdTRUE);
-    s_context_enable(context_current() );
+    s_context_enable( context_current() );
     return f.context;
 }
 
